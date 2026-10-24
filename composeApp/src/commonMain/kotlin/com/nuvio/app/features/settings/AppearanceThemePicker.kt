@@ -156,7 +156,7 @@ private fun ThemeChip(
         }
         Spacer(Modifier.height(NuvioTokens.Space.s6))
         Text(
-            text = stringResource(theme.labelRes),
+            text = theme.displayLabel ?: stringResource(theme.labelRes),
             style = MaterialTheme.typography.labelMedium,
             color = if (isSelected) tokens.colors.textPrimary else tokens.colors.textSecondary,
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
