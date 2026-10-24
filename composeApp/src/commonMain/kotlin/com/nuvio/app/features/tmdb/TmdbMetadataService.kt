@@ -2,6 +2,7 @@ package com.nuvio.app.features.tmdb
 
 import co.touchlab.kermit.Logger
 import com.nuvio.app.features.addons.httpGetText
+import com.nuvio.app.features.addons.httpGetTextWithHeaders
 import com.nuvio.app.features.details.MetaCompany
 import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.details.MetaPerson
@@ -21,6 +22,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -43,6 +47,126 @@ object TmdbMetadataService {
     private val backdropCache = linkedMapOf<String, String?>()
     private val backdropCacheMutex = Mutex()
     private val backdropRequests = Semaphore(4)
+
+    // Auto-translate fallback: when TMDB language is Arabic but the overview
+    // is not Arabic (TMDB has no Arabic overview, or the catalog text is
+    // English), translate it to Arabic so synopses are always Arabic.
+    // Failures silently keep the original text.
+    private val translationCache = mutableMapOf<String, String>()
+    private val translationCacheMutex = Mutex()
+
+    private fun isArabicText(text: String): Boolean {
+        var arabic = 0
+        var latin = 0
+        for (ch in text) {
+            when (ch.code) {
+                in 0x0600..0x06FF, in 0x0750..0x077F, in 0x08A0..0x08FF,
+                in 0xFB50..0xFDFF, in 0xFE70..0xFEFF -> arabic++
+                in 0x0041..0x005A, in 0x0061..0x007A -> latin++
+            }
+        }
+        return arabic > 0 && arabic >= latin
+    }
+
+    private fun encodeUrlQuery(value: String): String {
+        val out = StringBuilder()
+        var i = 0
+        while (i < value.length) {
+            val high = value[i]
+            val codePoint: Int
+            if (high.isHighSurrogate() && i + 1 < value.length && value[i + 1].isLowSurrogate()) {
+                val low = value[i + 1]
+                codePoint = 0x10000 + ((high.code - 0xD800) shl 10) + (low.code - 0xDC00)
+                i += 2
+            } else {
+                codePoint = high.code
+                i += 1
+            }
+            if (codePoint < 0x80) {
+                val ch = codePoint.toChar()
+                if (ch.isLetterOrDigit() || ch == '-' || ch == '_' || ch == '.' || ch == '~') {
+                    out.append(ch)
+                } else {
+                    out.append('%')
+                    out.append(codePoint.toString(16).uppercase().padStart(2, '0'))
+                }
+            } else {
+                val bytes = when {
+                    codePoint < 0x800 -> intArrayOf(
+                        0xC0 or (codePoint shr 6),
+                        0x80 or (codePoint and 0x3F),
+                    )
+                    codePoint < 0x10000 -> intArrayOf(
+                        0xE0 or (codePoint shr 12),
+                        0x80 or ((codePoint shr 6) and 0x3F),
+                        0x80 or (codePoint and 0x3F),
+                    )
+                    else -> intArrayOf(
+                        0xF0 or (codePoint shr 18),
+                        0x80 or ((codePoint shr 12) and 0x3F),
+                        0x80 or ((codePoint shr 6) and 0x3F),
+                        0x80 or (codePoint and 0x3F),
+                    )
+                }
+                for (byte in bytes) {
+                    out.append('%')
+                    out.append(byte.toString(16).uppercase().padStart(2, '0'))
+                }
+            }
+        }
+        return out.toString()
+    }
+
+    private fun parseGtxTranslation(response: String): String? {
+        return try {
+            val root = json.parseToJsonElement(response).jsonArray
+            val sentences = root.getOrNull(0)?.jsonArray ?: return null
+            val out = StringBuilder()
+            for (sentence in sentences) {
+                val parts = try { sentence.jsonArray } catch (e: Exception) { continue }
+                val translated = try { parts.getOrNull(0)?.jsonPrimitive?.content } catch (e: Exception) { null }
+                if (!translated.isNullOrEmpty() && translated != "null") out.append(translated)
+            }
+            out.toString().takeIf { it.isNotBlank() }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private suspend fun translateOverviewToArabic(text: String): String {
+        translationCacheMutex.withLock { translationCache[text]?.let { return it } }
+        val translated = try {
+            withTimeoutOrNull(10_000) {
+                val url = "https://translate.googleapis.com/translate_a/single" +
+                    "?client=gtx&sl=auto&tl=ar&dt=t&q=" + encodeUrlQuery(text)
+                val response = httpGetTextWithHeaders(
+                    url,
+                    mapOf(
+                        "User-Agent" to "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 " +
+                            "(KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36",
+                    ),
+                )
+                parseGtxTranslation(response)
+            }
+        } catch (e: Exception) {
+            null
+        } ?: return text
+        translationCacheMutex.withLock {
+            translationCache[text] = translated
+            if (translationCache.size > 256) translationCache.remove(translationCache.keys.first())
+        }
+        return translated
+    }
+
+    private suspend fun translateDescriptionIfNeeded(meta: MetaDetails, settings: TmdbSettings): MetaDetails {
+        val language = normalizeTmdbLanguage(settings.language)
+        if (language != "ar" && !language.startsWith("ar-")) return meta
+        val current = meta.description?.trim()?.takeIf { it.isNotBlank() } ?: return meta
+        if (current.length > 4000 || isArabicText(current)) return meta
+        val translated = translateOverviewToArabic(current)
+        if (translated == current) return meta
+        return meta.copy(description = translated)
+    }
 
     suspend fun fetchLocalizedBackdrop(id: String, type: String, language: String): String? =
         withContext(Dispatchers.Default) {
@@ -787,13 +911,15 @@ object TmdbMetadataService {
             trailers = enrichment.trailers,
         )
 
-    internal fun applyEnrichment(
+    internal suspend fun applyEnrichment(
         meta: MetaDetails,
         enrichment: TmdbEnrichment?,
         episodeMap: Map<Pair<Int, Int>, TmdbEpisodeEnrichment>,
         settings: TmdbSettings,
     ): MetaDetails {
-        if (enrichment == null && episodeMap.isEmpty()) return meta
+        if (enrichment == null && episodeMap.isEmpty()) {
+            return translateDescriptionIfNeeded(meta, settings)
+        }
 
         var updated = meta
 
@@ -909,7 +1035,7 @@ object TmdbMetadataService {
             updated = updated.copy(trailers = enrichment.trailers)
         }
 
-        return updated
+        return translateDescriptionIfNeeded(updated, settings)
     }
 
     private suspend fun fetchEnrichment(
