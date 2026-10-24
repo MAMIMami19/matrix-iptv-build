@@ -100,6 +100,12 @@ internal fun MainTabsDestination(
                 label = stringResource(Res.string.compose_nav_library),
             ),
             FloatingNavigationItem(
+                selected = selectedTab == AppScreenTab.MyList,
+                onClick = { onTabSelected(AppScreenTab.MyList) },
+                icon = Icons.Filled.Bookmark,
+                label = "My List",
+            ),
+            FloatingNavigationItem(
                 selected = selectedTab == AppScreenTab.Settings,
                 onClick = { onTabSelected(AppScreenTab.Settings) },
                 label = stringResource(Res.string.compose_nav_profile),
@@ -113,12 +119,6 @@ internal fun MainTabsDestination(
                         popupBelowAnchor = isTabletLayout,
                     )
                 },
-            ),
-            FloatingNavigationItem(
-                selected = selectedTab == AppScreenTab.MyList,
-                onClick = { onTabSelected(AppScreenTab.MyList) },
-                icon = Icons.Filled.Bookmark,
-                label = "My List",
             ),
         )
 
@@ -150,6 +150,12 @@ internal fun MainTabsDestination(
                             contentDescription = stringResource(Res.string.compose_nav_library),
                         )
                         NavItem(
+                            selected = selectedTab == AppScreenTab.MyList,
+                            onClick = { onTabSelected(AppScreenTab.MyList) },
+                            icon = Icons.Filled.Bookmark,
+                            contentDescription = "My List",
+                        )
+                        NavItem(
                             selected = selectedTab == AppScreenTab.Settings,
                             onClick = { onTabSelected(AppScreenTab.Settings) },
                         ) {
@@ -160,12 +166,6 @@ internal fun MainTabsDestination(
                                 onAddProfileRequested = onAddProfileRequested,
                             )
                         }
-                        NavItem(
-                            selected = selectedTab == AppScreenTab.MyList,
-                            onClick = { onTabSelected(AppScreenTab.MyList) },
-                            icon = Icons.Filled.Bookmark,
-                            contentDescription = "My List",
-                        )
                     }
                 }
             },
