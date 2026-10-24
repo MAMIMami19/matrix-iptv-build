@@ -69,6 +69,18 @@ internal fun IptvSettingsScreen(
     var showSetPin by remember { mutableStateOf(false) }
     var pendingAfterPin by remember { mutableStateOf<(() -> Unit)?>(null) }
     var cacheCleared by remember { mutableStateOf(false) }
+    // NOTE: these must live here, not inside the LazyColumn scope below —
+    // the LazyListScope lambda is not a @Composable context, so remember
+    // calls placed between item blocks fail compilation.
+    val labelByCode = remember {
+        AvailableLanguageOptions.associate { it.code to it.labelRes }
+    }
+    val orderedCodes = remember {
+        (
+            listOf("ar", "kk", "hy", "he", "ur", "fa", "ku", "hi", "bn", "ta", "te") +
+                AvailableLanguageOptions.map { it.code }
+            ).distinct()
+    }
 
     // Synchronous + idempotent: avoids one frame of default values.
     IptvSettingsRepository.ensureLoaded()
@@ -243,15 +255,6 @@ internal fun IptvSettingsScreen(
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(top = 8.dp),
             )
-        }
-        val labelByCode = remember {
-            AvailableLanguageOptions.associate { it.code to it.labelRes }
-        }
-        val orderedCodes = remember {
-            (
-                listOf("ar", "kk", "hy", "he", "ur", "fa", "ku", "hi", "bn", "ta", "te") +
-                    AvailableLanguageOptions.map { it.code }
-                ).distinct()
         }
         items(orderedCodes, key = { it }) { code ->
             // Kurdish has no string resource in the app; use a literal label.
