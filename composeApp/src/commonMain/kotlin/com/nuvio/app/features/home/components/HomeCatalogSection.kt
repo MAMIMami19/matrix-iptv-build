@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import com.nuvio.app.core.ui.NuvioShelfSection
 import com.nuvio.app.core.ui.NuvioViewAllPillSize
+import com.nuvio.app.core.ui.TrueCrimeRowHeader
 import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
 import com.nuvio.app.features.catalog.CatalogTarget
 import com.nuvio.app.features.home.HomeCatalogSection
@@ -75,6 +76,9 @@ private fun HomeCatalogRowSectionContent(
     // Every other row renders exactly as before.
     val isRankedRow = (section.target as? CatalogTarget.Addon)?.catalogId in
         setOf("trending_movie", "trending_series")
+    // The sections addon's true-crime catalog gets the branded header
+    // (3D logo mark + Arabic title) instead of the default title header.
+    val isTrueCrimeRow = (section.target as? CatalogTarget.Addon)?.catalogId == "true_crime"
     val indexedEntries = entries.mapIndexed { index, item -> index to item }
 
     NuvioShelfSection(
@@ -85,6 +89,11 @@ private fun HomeCatalogRowSectionContent(
         rowContentPadding = PaddingValues(horizontal = sectionPadding),
         onViewAllClick = onViewAllClick,
         viewAllPillSize = NuvioViewAllPillSize.Compact,
+        headerContent = if (isTrueCrimeRow) {
+            { TrueCrimeRowHeader(onViewAllClick = onViewAllClick) }
+        } else {
+            null
+        },
         key = { indexed -> indexed.second.stableKey() },
     ) { (index, item) ->
         HomePosterCard(

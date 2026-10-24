@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -33,8 +34,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.StrokeJoin
 import androidx.compose.ui.layout.ContentScale
@@ -78,6 +81,11 @@ fun <T> NuvioShelfSection(
     key: ((T) -> Any)? = null,
     animatePlacement: Boolean = false,
     state: LazyListState = rememberLazyListState(),
+    /**
+     * Custom header replacing the default title header (used by the branded
+     * true-crime row). Null = default header.
+     */
+    headerContent: @Composable (() -> Unit)? = null,
     itemContent: @Composable (T) -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
@@ -88,7 +96,11 @@ fun <T> NuvioShelfSection(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(tokens.spacing.controlGap + NuvioTokens.Space.s2),
     ) {
-        if (title.isNotBlank()) {
+        if (headerContent != null) {
+            Box(modifier = Modifier.padding(horizontal = headerHorizontalPadding)) {
+                headerContent()
+            }
+        } else if (title.isNotBlank()) {
             NuvioShelfSectionHeader(
                 title = title,
                 modifier = Modifier.padding(horizontal = headerHorizontalPadding),
@@ -312,6 +324,78 @@ private fun RankNumber(rank: Int) {
             text = rank.toString(),
             style = style.copy(drawStyle = Stroke(width = strokeWidth, join = StrokeJoin.Round)),
             color = Color.White,
+        )
+    }
+}
+
+/**
+ * Branded header for the true-crime home row, per the mockup: a big 3D-style
+ * logo mark at the start (left) and the Arabic row title at the end (right),
+ * with the show cards in the row underneath. The title stays tappable for
+ * "view all" when the row provides one, so the row loses no navigation.
+ */
+@Composable
+internal fun TrueCrimeRowHeader(onViewAllClick: (() -> Unit)?) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        TrueCrimeLogoMark()
+        Spacer(modifier = Modifier.weight(1f))
+        Text(
+            text = "تحقيقات وجرائم",
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 24.sp,
+            ),
+            modifier = if (onViewAllClick != null) {
+                Modifier.clickable { onViewAllClick() }
+            } else {
+                Modifier
+            },
+        )
+    }
+}
+
+/**
+ * True-crime logo mark drawn in code (no third-party asset): heavy block
+ * letters with a red gradient face, dark stepped extrusion behind them for
+ * 3D depth, and a soft drop shadow so the mark pops off the background.
+ */
+@Composable
+private fun TrueCrimeLogoMark() {
+    val depthColor = Color(0xFF1A0000)
+    val faceGradient = Brush.verticalGradient(
+        listOf(Color(0xFFFF5252), Color(0xFFC62828), Color(0xFF7F0000)),
+    )
+    val markStyle = TextStyle(
+        fontSize = 34.sp,
+        lineHeight = 34.sp,
+        fontWeight = FontWeight.Black,
+        letterSpacing = 1.sp,
+    )
+    Box {
+        // Stepped extrusion: dark copies offset down-right, furthest first.
+        Text(
+            text = "TRUE\nCRIME",
+            style = markStyle,
+            color = depthColor,
+            modifier = Modifier.offset(x = 4.dp, y = 5.dp),
+        )
+        Text(
+            text = "TRUE\nCRIME",
+            style = markStyle,
+            color = depthColor,
+            modifier = Modifier.offset(x = 2.dp, y = 2.dp),
+        )
+        // Gradient face with a drop shadow on top.
+        Text(
+            text = "TRUE\nCRIME",
+            style = markStyle.copy(
+                brush = faceGradient,
+                shadow = Shadow(
+                    color = Color.Black.copy(alpha = 0.7f),
+                    offset = Offset(2f, 4f),
+                    blurRadius = 6f,
+                ),
+            ),
         )
     }
 }
