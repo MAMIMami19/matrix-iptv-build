@@ -3,6 +3,7 @@ package com.nuvio.app.features.settings
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.CustomThemeColors
 import com.nuvio.app.core.ui.NativeTabBridge
+import com.nuvio.app.core.ui.PosterCardStyleRepository
 import com.nuvio.app.core.ui.ThemeColors
 import com.nuvio.app.features.membership.MemberAccessRepository
 import com.nuvio.app.features.membership.availableAppThemes
@@ -105,6 +106,39 @@ object ThemeSettingsRepository {
         _selectedThemePreference.value = theme
         ThemeSettingsStorage.saveSelectedTheme(theme.name)
         applyEffectiveTheme()
+        applyPlatformCoupling(theme)
+    }
+
+    // Showmax+ platform coupling: switching to a platform theme also applies that
+    // platform's poster display preset and its closest app icon variant.
+    private fun applyPlatformCoupling(theme: AppTheme) {
+        val preset = when (theme) {
+            AppTheme.SHOWMAX -> Triple(126, 12, false)
+            AppTheme.OSN -> Triple(126, 12, false)
+            AppTheme.NETFLIX -> Triple(208, 8, true)
+            AppTheme.APPLE_TV -> Triple(150, 20, false)
+            AppTheme.MAX -> Triple(140, 16, false)
+            AppTheme.SHAHID -> Triple(126, 12, false)
+            AppTheme.PARAMOUNT -> Triple(140, 12, false)
+            AppTheme.DISNEY -> Triple(140, 16, false)
+            AppTheme.STARZPLAY -> Triple(140, 10, false)
+            AppTheme.PRIME -> Triple(140, 8, false)
+            AppTheme.CANAL -> Triple(150, 6, false)
+            else -> null
+        } ?: return
+        PosterCardStyleRepository.setCatalogLandscapeModeEnabled(preset.third)
+        PosterCardStyleRepository.setWidthDp(preset.first)
+        PosterCardStyleRepository.setCornerRadiusDp(preset.second)
+        val icon = when (theme) {
+            AppTheme.SHOWMAX, AppTheme.OSN -> AppIconOption.ORIGINAL
+            AppTheme.NETFLIX, AppTheme.APPLE_TV -> AppIconOption.GRAPHITE
+            AppTheme.MAX -> AppIconOption.COPPER
+            AppTheme.SHAHID, AppTheme.CANAL -> AppIconOption.ROSE_GOLD
+            AppTheme.PARAMOUNT, AppTheme.DISNEY, AppTheme.PRIME -> AppIconOption.ARCTIC_BLUE
+            AppTheme.STARZPLAY -> AppIconOption.EMERALD
+            else -> null
+        } ?: return
+        scope.launch { AppIconRepository.select(icon) }
     }
 
     fun setCustomTheme(colors: CustomThemeColors) {
