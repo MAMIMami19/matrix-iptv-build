@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import com.nuvio.app.core.ui.NuvioShelfSection
 import com.nuvio.app.core.ui.NuvioViewAllPillSize
+import com.nuvio.app.core.ui.PlatformLogoHeader
 import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
 import com.nuvio.app.features.catalog.CatalogTarget
 import com.nuvio.app.features.home.HomeCatalogSection
@@ -75,6 +76,32 @@ private fun HomeCatalogRowSectionContent(
     // Every other row renders exactly as before.
     val isRankedRow = (section.target as? CatalogTarget.Addon)?.catalogId in
         setOf("trending_movie", "trending_series")
+    // Platform logo headers: the header image is a pure function of the
+    // section's own catalog id — the same id that fetched this row's items —
+    // so each logo sits above only its own platform's exclusives. Originals
+    // catalogs carry a movie/series type suffix, hence prefix matching.
+    // Rows not listed here (Top 10, trending, reality, now showing/airing)
+    // keep their plain titles.
+    val catalogId = (section.target as? CatalogTarget.Addon)?.catalogId
+    val platformLogoAsset = when {
+        catalogId == null -> null
+        catalogId.startsWith("originals_canal") -> "logo_canal.jpg"
+        catalogId.startsWith("originals_osn") -> "logo_osn.jpg"
+        catalogId == "shahid_movie" || catalogId == "shahid_series" -> "logo_shahid.jpg"
+        catalogId.startsWith("originals_disney") -> "logo_disney.jpg"
+        catalogId.startsWith("originals_hulu") -> "logo_hulu.jpg"
+        catalogId.startsWith("originals_apple") -> "logo_apple.jpg"
+        catalogId.startsWith("originals_hbo") -> "logo_hbo.jpg"
+        catalogId.startsWith("originals_prime") -> "logo_prime.jpg"
+        catalogId.startsWith("originals_paramount") -> "logo_paramount.jpg"
+        catalogId.startsWith("originals_netflix") -> "logo_netflix.jpg"
+        catalogId.startsWith("originals_natgeo") -> "logo_natgeo.jpg"
+        catalogId.startsWith("originals_showmax") -> "logo_showmax.jpg"
+        catalogId.startsWith("originals_starz") -> "logo_starz.jpg"
+        catalogId == "true_crime" -> "logo_id.jpg"
+        else -> null
+    }
+    val isTrueCrimeRow = catalogId == "true_crime"
     val indexedEntries = entries.mapIndexed { index, item -> index to item }
 
     NuvioShelfSection(
@@ -85,6 +112,16 @@ private fun HomeCatalogRowSectionContent(
         rowContentPadding = PaddingValues(horizontal = sectionPadding),
         onViewAllClick = onViewAllClick,
         viewAllPillSize = NuvioViewAllPillSize.Compact,
+        headerContent = platformLogoAsset?.let { asset ->
+            {
+                PlatformLogoHeader(
+                    assetFileName = asset,
+                    contentDescription = section.title,
+                    title = if (isTrueCrimeRow) "تحقيقات وجرائم" else null,
+                    onViewAllClick = onViewAllClick,
+                )
+            }
+        },
         key = { indexed -> indexed.second.stableKey() },
     ) { (index, item) ->
         HomePosterCard(
