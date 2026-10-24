@@ -64,6 +64,10 @@ def main():
         for mtype, kind in [("movie", "movie"), ("series", "tv")]:
             d = get(f"/trending/{kind}/week", region=country)
             add(f"top10_{mtype}_{country.lower()}", f"Top 10 {mtype} {country}", mtype, d["results"][:10])
+    # Global trending (no region filter) — the "Films/Séries tendances" rows
+    for mtype, kind, name in [("movie", "movie", "Films tendances"), ("series", "tv", "Séries tendances")]:
+        d = get(f"/trending/{kind}/week")
+        add(f"trending_{mtype}", name, mtype, d["results"][:20])
     # Reality TV + True Crime (genre ids: reality 10764, crime 80; crime-only filter for true crime)
     d = get("/discover/tv", with_genres="10764", sort_by="popularity.desc")
     add("reality_tv", "Télé-réalité", "series", d["results"][:30])
