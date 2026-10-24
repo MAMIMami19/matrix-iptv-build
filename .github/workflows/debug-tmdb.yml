@@ -1,0 +1,28 @@
+name: debug-tmdb
+on:
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Shahid provider id and discover counts
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: |
+          python3 - <<'PYEOF'
+          import json, urllib.request
+          import os
+          key = os.environ["TMDB_API_KEY"]
+          def get(path):
+              with urllib.request.urlopen(f"https://api.themoviedb.org/3{path}&api_key={key}") as r:
+                  return json.load(r)
+          for kind in ("movie", "tv"):
+              provs = get(f"/watch/providers/{kind}?language=en-US")
+              hits = [p for p in provs.get("results", []) if "shahid" in p.get("provider_name", "").lower() or p.get("provider_id") == 1715]
+              print(kind, "shahid provider matches:", [(p["provider_id"], p["provider_name"]) for p in hits])
+          for kind in ("movie", "tv"):
+              for region in ("SA", "EG"):
+                  d = get(f"/discover/{kind}?with_watch_providers=1715&watch_region={region}&sort_by=popularity.desc")
+                  res = d.get("results", [])
+                  print(f"discover {kind} provider=1715 region={region} total={d.get('total_results')} sample={[r.get('title') or r.get('name') for r in res[:5]]}")
+          PYEOF

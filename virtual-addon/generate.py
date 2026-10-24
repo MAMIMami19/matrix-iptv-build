@@ -41,10 +41,10 @@ def catalog(cid, name, mtype, items):
     return {"id": cid, "type": mtype, "name": name,
             "metas": [meta(i, mtype) for i in kept]}
 
-# Network ids (TMDB) — confident: Netflix 213, HBO 49, Apple 2552, Disney 2739, Paramount 4330, STARZ 1077, Prime 1024. Showmax 3903?, OSN 5611?, myCANAL 1511? unverified (wrong ids simply yield empty results, safe). Shahid: TMDB lists most Shahid Originals under parent network MBC 2320 (no standalone Shahid network id); watch-provider id 1715 noted but unused by the discover/with_networks path.
+# Network ids (TMDB) — confident: Netflix 213, HBO 49, Apple 2552, Disney 2739, Paramount 4330, STARZ 1077, Prime 1024. Showmax 3903?, OSN 5611?, myCANAL 1511? unverified (wrong ids simply yield empty results, safe). Shahid: NO verified TMDB network id (2320 = Fox Business, confirmed on TMDB site). Watch-provider id 1715 (user-supplied) under verification via debug workflow; if confirmed, use discover with_watch_providers + watch_region.
 NETWORKS = {"netflix": 213, "apple": 2552, "hbo": 49, "paramount": 4330,
             "disney": 2739, "starz": 1077, "prime": 1024, "showmax": 3903, "osn": 5611, "canal": 1511,
-            "shahid": 2320,  # MBC (parent network carrying Shahid Originals)
+            # Shahid REMOVED 2026-10-24: 2320 verified as Fox Business Network on TMDB, not MBC/Shahid. Do not re-add without a verified network id.
             # Disney+ hubs (ride inside the Disney theme): Hulu + National Geographic
             "hulu": 453, "natgeo": 2058}
 
