@@ -13,6 +13,18 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Write local.properties (backend config + release signing)
+        run: |
+          echo "${{ secrets.NUVIO_KEYSTORE_B64 }}" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          {
+            echo "NUVIO_SUPABASE_URL=${{ secrets.NUVIO_SUPABASE_URL }}"
+            echo "NUVIO_SUPABASE_ANON_KEY=${{ secrets.NUVIO_SUPABASE_ANON_KEY }}"
+            echo "NUVIO_SUPABASE_FALLBACK_URL=${{ secrets.NUVIO_SUPABASE_FALLBACK_URL }}"
+            echo "NUVIO_RELEASE_STORE_FILE=$RUNNER_TEMP/release.keystore"
+            echo "NUVIO_RELEASE_STORE_PASSWORD=${{ secrets.NUVIO_RELEASE_STORE_PASSWORD }}"
+            echo "NUVIO_RELEASE_KEY_ALIAS=${{ secrets.NUVIO_RELEASE_KEY_ALIAS }}"
+            echo "NUVIO_RELEASE_KEY_PASSWORD=${{ secrets.NUVIO_RELEASE_KEY_PASSWORD }}"
+          } > local.properties
       - name: Install Android SDK 37
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
@@ -26,4 +38,13 @@ jobs:
         with:
           name: showmax-debug-apk
           path: "**/build/outputs/apk/**/*.apk"
+          if-no-files-found: error
+
+      - name: Build signed Full release APK
+        run: ./gradlew :androidApp:assembleFullRelease -Pnuvio.android.distribution=full --stacktrace --console=plain
+      - name: Upload release APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: showmax-release-apks
+          path: "androidApp/build/outputs/apk/full/release/*.apk"
           if-no-files-found: error
