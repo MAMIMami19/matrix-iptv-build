@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -79,11 +78,6 @@ fun <T> NuvioShelfSection(
     key: ((T) -> Any)? = null,
     animatePlacement: Boolean = false,
     state: LazyListState = rememberLazyListState(),
-    /**
-     * Custom header replacing the default title header (used by the platform
-     * logo rows). Null = default header.
-     */
-    headerContent: @Composable (() -> Unit)? = null,
     itemContent: @Composable (T) -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
@@ -94,11 +88,7 @@ fun <T> NuvioShelfSection(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(tokens.spacing.controlGap + NuvioTokens.Space.s2),
     ) {
-        if (headerContent != null) {
-            Box(modifier = Modifier.padding(horizontal = headerHorizontalPadding)) {
-                headerContent()
-            }
-        } else if (title.isNotBlank()) {
+        if (title.isNotBlank()) {
             NuvioShelfSectionHeader(
                 title = title,
                 modifier = Modifier.padding(horizontal = headerHorizontalPadding),
@@ -323,53 +313,6 @@ private fun RankNumber(rank: Int) {
             style = style.copy(drawStyle = Stroke(width = strokeWidth, join = StrokeJoin.Round)),
             color = Color.White,
         )
-    }
-}
-
-/**
- * Official platform logo header, rendered from the platform's own image
- * asset (never redrawn, recolored, or approximated). Uniform size for every
- * platform: a full-width, 120dp-tall banner band — the Netflix banner
- * treatment. The image keeps its aspect ratio (Fit: never cropped or
- * stretched) and is centered in the band, or drawn from the start when a
- * title sits alongside it (true crime: ID image + Arabic title, as in the
- * mockup). The whole header stays tappable for "view all" when the row
- * provides one, so the row loses no navigation.
- */
-@Composable
-internal fun PlatformLogoHeader(
-    assetFileName: String,
-    contentDescription: String?,
-    title: String? = null,
-    onViewAllClick: (() -> Unit)? = null,
-) {
-    val headerModifier = if (onViewAllClick != null) {
-        Modifier.clickable { onViewAllClick() }
-    } else {
-        Modifier
-    }
-    Box(
-        modifier = headerModifier.fillMaxWidth().height(120.dp),
-    ) {
-        AsyncImage(
-            model = "file:///android_asset/$assetFileName",
-            contentDescription = contentDescription,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit,
-            alignment = if (title != null) Alignment.CenterStart else Alignment.Center,
-        )
-        if (title != null) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 24.sp,
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.align(Alignment.CenterEnd).widthIn(max = 170.dp),
-            )
-        }
     }
 }
 
