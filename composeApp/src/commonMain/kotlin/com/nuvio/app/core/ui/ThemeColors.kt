@@ -213,13 +213,13 @@ object ThemeColors {
     )
 
     val AppleTv = ThemeColorPalette(
-        secondary = Color(0xFF1480EE),
-        secondaryVariant = Color(0xFF0A5CB8),
-        accentGradient = listOf(Color(0xFF1480EE)),
-        nativeAccentHex = "#1480EE",
-        onSecondary = Color.White,
+        secondary = Color(0xFFFFFFFF),
+        secondaryVariant = Color(0xFFE5E5E7),
+        accentGradient = listOf(Color(0xFFFFFFFF), Color(0xFFE5E5E7)),
+        nativeAccentHex = "#FFFFFF",
+        onSecondary = Color.Black,
         focusRing = Color(0xFFFFFFFF),
-        focusBackground = Color(0xFF0D2138),
+        focusBackground = Color(0xFF2A2A2A),
         background = Color(0xFF000000),
         backgroundElevated = Color(0xFF1A1A1A),
         backgroundCard = Color(0xFF222222),
