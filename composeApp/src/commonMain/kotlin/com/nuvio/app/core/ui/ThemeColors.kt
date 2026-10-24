@@ -304,12 +304,12 @@ object ThemeColors {
     )
 
     val Canal = ThemeColorPalette(
-        secondary = Color(0xFFF43F5E),
-        secondaryVariant = Color(0xFFD8324E),
-        accentGradient = listOf(Color(0xFFD8324E), Color(0xFFF43F5E)),
-        nativeAccentHex = "#F43F5E",
+        secondary = Color(0xFFE50813),
+        secondaryVariant = Color(0xFFFF0000),
+        accentGradient = listOf(Color(0xFFE50813), Color(0xFFFF0000)),
+        nativeAccentHex = "#E50813",
         onSecondary = Color.White,
-        focusRing = Color(0xFFF43F5E),
+        focusRing = Color(0xFFE50813),
         focusBackground = Color(0xFF2E0E16),
         background = Color(0xFF000000),
         backgroundElevated = Color(0xFF1C1C1D),
