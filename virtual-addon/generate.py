@@ -41,7 +41,7 @@ def catalog(cid, name, mtype, items):
     return {"id": cid, "type": mtype, "name": name,
             "metas": [meta(i, mtype) for i in kept]}
 
-# Network ids (TMDB) — confident: Netflix 213, HBO 49, Apple 2552, Disney 2739, Paramount 4330, STARZ 1077, Prime 1024. Showmax 3903?, OSN 5611?, myCANAL 1511? unverified (wrong ids simply yield empty results, safe). Shahid: NO verified TMDB network id (2320 = Fox Business, confirmed on TMDB site). Watch-provider id 1715 (user-supplied) under verification via debug workflow; if confirmed, use discover with_watch_providers + watch_region.
+# Network ids (TMDB) — confident: Netflix 213, HBO 49, Apple 2552, Disney 2739, Paramount 4330, STARZ 1077, Prime 1024. Showmax 3903?, OSN 5611?, myCANAL 1511? unverified (wrong ids simply yield empty results, safe). Shahid: NO TMDB network id (2320 = Fox Business, confirmed on TMDB site). Watch-provider 1715 VERIFIED 2026-10-24 as "Shahid VIP" on TMDB provider lists (movie+tv); provider route used below.
 NETWORKS = {"netflix": 213, "apple": 2552, "hbo": 49, "paramount": 4330,
             "disney": 2739, "starz": 1077, "prime": 1024, "showmax": 3903, "osn": 5611, "canal": 1511,
             # Shahid REMOVED 2026-10-24: 2320 verified as Fox Business Network on TMDB, not MBC/Shahid. Do not re-add without a verified network id.
@@ -84,6 +84,12 @@ def main():
             d = get(f"/discover/{kind}", with_networks=str(nid), sort_by="popularity.desc")
             if d["results"]:
                 add(f"originals_{plat}_{mtype}", f"{plat} Originals", mtype, d["results"][:30])
+    # Shahid via watch provider (NOT originals-only: everything streaming on Shahid,
+    # originals + licensed — so the catalog is named "Shahid", never "Shahid Originals").
+    for mtype, kind in [("movie", "movie"), ("series", "tv")]:
+        d = get(f"/discover/{kind}", with_watch_providers="1715", watch_region="SA", sort_by="popularity.desc")
+        if d["results"]:
+            add(f"shahid_{mtype}", "Shahid", mtype, d["results"][:30])
     manifest = {
         "id": "showmax.plus.sections", "version": "1.0.0", "name": "Showmax+ Sections",
         "description": "Built-in home sections for Showmax+ (Top 10, reality, true crime, now showing, platform originals).",
