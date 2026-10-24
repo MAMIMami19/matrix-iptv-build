@@ -421,6 +421,10 @@ internal fun MainAppContent(
             AppScreenTab.Library -> libraryScrollToTopRequests.tryEmit(Unit)
             AppScreenTab.MyList -> libraryScrollToTopRequests.tryEmit(Unit)
             AppScreenTab.Settings -> settingsRootActionRequests.tryEmit(Unit)
+            // Re-tapping an already-selected IPTV / Live TV tab is a no-op:
+            // those tabs expose no scroll-to-top request to emit.
+            AppScreenTab.Iptv -> Unit
+            AppScreenTab.LiveTv -> Unit
         }
     }
 
