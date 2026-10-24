@@ -28,6 +28,8 @@ import com.nuvio.app.features.cloud.CloudLibraryItem
 import com.nuvio.app.features.home.HomeCatalogSection
 import com.nuvio.app.features.home.HomeScreen
 import com.nuvio.app.features.home.MetaPreview
+import com.nuvio.app.features.iptv.LiveTvScreen
+import com.nuvio.app.features.iptv.VodScreen
 import com.nuvio.app.features.library.LibraryItem
 import com.nuvio.app.features.library.LibraryScreen
 import com.nuvio.app.features.library.LibrarySection
@@ -91,6 +93,7 @@ internal data class AppTabActions(
     val onLibraryPosterLongClick: ((LibraryItem, LibrarySection) -> Unit)? = null,
     val onLibrarySectionViewAllClick: ((LibrarySection, LibrarySortOption) -> Unit)? = null,
     val onCloudFilePlay: ((CloudLibraryItem, CloudLibraryFile) -> Unit)? = null,
+    val onXtreamPlay: ((title: String, streamId: Int, url: String, contentType: String) -> Unit)? = null,
     val onConnectCloudClick: (() -> Unit)? = null,
     val onDownloadsClick: () -> Unit = {},
     val onContinueWatchingClick: ((ContinueWatchingItem) -> Unit)? = null,
@@ -189,6 +192,24 @@ internal fun AppTabHost(
                     onPreviewLongClick = actions.onPosterLongClick,
                     onDownloadsClick = actions.onDownloadsClick,
                     disintegrationRequest = state.libraryDisintegrationRequest,
+                )
+            }
+
+            AppScreenTab.Iptv -> {
+                VodScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onPlay = { title, streamId, url, contentType ->
+                        actions.onXtreamPlay?.invoke(title, streamId, url, contentType)
+                    },
+                )
+            }
+
+            AppScreenTab.LiveTv -> {
+                LiveTvScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onPlay = { title, streamId, url, contentType ->
+                        actions.onXtreamPlay?.invoke(title, streamId, url, contentType)
+                    },
                 )
             }
 

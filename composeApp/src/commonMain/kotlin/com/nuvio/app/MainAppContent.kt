@@ -1402,6 +1402,19 @@ internal fun MainAppContent(
                                         }
                                     }
                                 },
+                                onXtreamPlay = { title, streamId, url, contentType ->
+                                    val playerLaunch = PlayerLaunch(
+                                        profileId = activePlaybackProfileId,
+                                        title = title,
+                                        sourceUrl = url,
+                                        streamTitle = title,
+                                        providerName = "NOVA",
+                                        parentMetaId = "iptv:$streamId",
+                                        parentMetaType = contentType,
+                                    )
+                                    val launchId = PlayerLaunchStore.put(playerLaunch)
+                                    navController.navigate(PlayerRoute(launchId = launchId, title = playerLaunch.title))
+                                },
                                 onConnectCloudClick = {
                                     if (useNativeNavigation && !isTabletLayout) {
                                         activateTab(AppScreenTab.Settings)

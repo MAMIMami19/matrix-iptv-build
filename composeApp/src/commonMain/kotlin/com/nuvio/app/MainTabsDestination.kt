@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.OndemandVideo
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -106,6 +108,18 @@ internal fun MainTabsDestination(
                 label = "My List",
             ),
             FloatingNavigationItem(
+                selected = selectedTab == AppScreenTab.Iptv,
+                onClick = { onTabSelected(AppScreenTab.Iptv) },
+                icon = Icons.Filled.OndemandVideo,
+                label = "IPTV",
+            ),
+            FloatingNavigationItem(
+                selected = selectedTab == AppScreenTab.LiveTv,
+                onClick = { onTabSelected(AppScreenTab.LiveTv) },
+                icon = Icons.Filled.Tv,
+                label = "Live TV",
+            ),
+            FloatingNavigationItem(
                 selected = selectedTab == AppScreenTab.Settings,
                 onClick = { onTabSelected(AppScreenTab.Settings) },
                 label = stringResource(Res.string.compose_nav_profile),
@@ -154,6 +168,18 @@ internal fun MainTabsDestination(
                             onClick = { onTabSelected(AppScreenTab.MyList) },
                             icon = Icons.Filled.Bookmark,
                             contentDescription = "My List",
+                        )
+                        NavItem(
+                            selected = selectedTab == AppScreenTab.Iptv,
+                            onClick = { onTabSelected(AppScreenTab.Iptv) },
+                            icon = Icons.Filled.OndemandVideo,
+                            contentDescription = "IPTV",
+                        )
+                        NavItem(
+                            selected = selectedTab == AppScreenTab.LiveTv,
+                            onClick = { onTabSelected(AppScreenTab.LiveTv) },
+                            icon = Icons.Filled.Tv,
+                            contentDescription = "Live TV",
                         )
                         NavItem(
                             selected = selectedTab == AppScreenTab.Settings,

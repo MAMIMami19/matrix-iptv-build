@@ -46,6 +46,15 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
     @get:Input
     abstract val tmdbApiKey: Property<String>
 
+    @get:Input
+    abstract val xtreamServer: Property<String>
+
+    @get:Input
+    abstract val xtreamUsername: Property<String>
+
+    @get:Input
+    abstract val xtreamPassword: Property<String>
+
     @TaskAction
     fun generate() {
         val props = Properties()
@@ -89,6 +98,21 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 |
                 |object TmdbConfig {
                 |    const val API_KEY = "${tmdbApiKey.get()}"
+                |}
+                """.trimMargin()
+            )
+        }
+
+        outDir.resolve("com/nuvio/app/features/iptv").apply {
+            mkdirs()
+            resolve("XtreamConfig.kt").writeText(
+                """
+                |package com.nuvio.app.features.iptv
+                |
+                |object XtreamConfig {
+                |    const val SERVER = "${xtreamServer.get()}"
+                |    const val USERNAME = "${xtreamUsername.get()}"
+                |    const val PASSWORD = "${xtreamPassword.get()}"
                 |}
                 """.trimMargin()
             )
@@ -325,6 +349,9 @@ val generateRuntimeConfigs = tasks.register<GenerateRuntimeConfigsTask>("generat
     supabaseFallbackUrl.set(runtimeConfigValue("NUVIO_SUPABASE_FALLBACK_URL"))
     sentryDsn.set(runtimeConfigValue("SENTRY_DSN"))
     tmdbApiKey.set(runtimeConfigValue("TMDB_API_KEY"))
+    xtreamServer.set(runtimeConfigValue("NUVIO_XTREAM_SERVER"))
+    xtreamUsername.set(runtimeConfigValue("NUVIO_XTREAM_USER"))
+    xtreamPassword.set(runtimeConfigValue("NUVIO_XTREAM_PASS"))
     sentryEnvironment.set(
         when {
             requestedGradleTasks.any { "benchmark" in it } -> "benchmark"
