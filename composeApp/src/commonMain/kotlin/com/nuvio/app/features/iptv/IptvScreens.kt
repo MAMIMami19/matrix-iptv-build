@@ -1,6 +1,8 @@
 package com.nuvio.app.features.iptv
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,8 +12,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -22,12 +30,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -75,29 +87,6 @@ private fun IptvEmpty(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun IptvRow(iconUrl: String?, name: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (!iconUrl.isNullOrBlank()) {
-            AsyncImage(
-                model = iconUrl,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-            )
-            Spacer(modifier = Modifier.size(12.dp))
-        }
-        Text(
-            text = name,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-
-@Composable
 private fun IptvSearchField(query: String, onQueryChange: (String) -> Unit) {
     OutlinedTextField(
         value = query,
@@ -107,6 +96,119 @@ private fun IptvSearchField(query: String, onQueryChange: (String) -> Unit) {
         modifier = Modifier.fillMaxWidth(),
     )
     Spacer(modifier = Modifier.height(8.dp))
+}
+
+/**
+ * Poster card: poster image on top, title always visible below it.
+ * Used in VOD shelves (fixed 120dp width) and in the full-category grid
+ * (fills the grid cell width).
+ */
+@Composable
+private fun IptvPosterCard(
+    imageUrl: String?,
+    title: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.clickable(onClick = onClick)) {
+        Box(
+            modifier = Modifier.fillMaxWidth().height(170.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            if (!imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = title,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/**
+ * Full-width channel/episode row: icon on the left, name on top and an info
+ * line underneath (EPG placeholder "Pas d'informations" for live channels).
+ */
+@Composable
+private fun IptvChannelRow(
+    iconUrl: String?,
+    name: String,
+    infoLine: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier.size(56.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (!iconUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = iconUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Text(
+                    text = "▶",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.size(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = name,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = infoLine,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun IptvChip(label: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier.padding(end = 8.dp)
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = label,
+            maxLines = 1,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
 }
 
 @Composable
@@ -184,6 +286,13 @@ internal fun LiveTvScreen(
         }
     }
 
+    fun selectGroup(category: XtreamCategory) {
+        selected = category
+        channels = null
+        query = ""
+        loadChannels(category)
+    }
+
     LaunchedEffect(Unit) { loadCategories() }
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
@@ -204,16 +313,48 @@ internal fun LiveTvScreen(
                 if (list.isEmpty()) {
                     IptvEmpty(message = "No channels found", onRetry = { loadCategories() })
                 } else {
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(list, key = { it.categoryId }) { category ->
-                        IptvRow(iconUrl = null, name = category.categoryName) {
-                            selected = category
-                            channels = null
-                            query = ""
-                            loadChannels(category)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Groupes",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LazyRow {
+                            items(list, key = { it.categoryId }) { category ->
+                                IptvChip(label = category.categoryName) {
+                                    selectGroup(category)
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Mes Groupes",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LazyColumn(modifier = Modifier.weight(1f)) {
+                            items(list, key = { it.categoryId }) { category ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .clickable { selectGroup(category) }
+                                        .padding(vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = category.categoryName,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    Text(
+                                        text = ">",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
                         }
                     }
-                }
                 }
             }
             else -> {
@@ -221,6 +362,29 @@ internal fun LiveTvScreen(
                 TextButton(onClick = { selected = null; channels = null; query = "" }) {
                     Text("Back")
                 }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = category.categoryName,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
+                    )
+                    val count = channels?.size
+                    if (count != null) {
+                        Box(
+                            modifier = Modifier.clip(RoundedCornerShape(50))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(horizontal = 12.dp, vertical = 4.dp),
+                        ) {
+                            Text(
+                                text = count.toString(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
                 IptvSearchField(query = query, onQueryChange = { query = it })
                 val shown = channels.orEmpty().filter {
                     query.isBlank() || it.name.contains(query, ignoreCase = true)
@@ -230,22 +394,26 @@ internal fun LiveTvScreen(
                 } else if (shown.isEmpty()) {
                     Text("No results")
                 } else {
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(shown, key = { it.streamId }) { channel ->
-                        IptvRow(iconUrl = channel.streamIcon, name = channel.name) {
-                            IptvSettingsRepository.addPlayedIptvKey(
-                                "iptv:${channel.streamId}",
-                                "iptv:${channel.streamId}",
-                            )
-                            onPlay(
-                                channel.name,
-                                channel.streamId,
-                                XtreamClient.liveStreamUrl(channel.streamId),
-                                "tv",
-                            )
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        items(shown, key = { it.streamId }) { channel ->
+                            IptvChannelRow(
+                                iconUrl = channel.streamIcon,
+                                name = channel.name,
+                                infoLine = "Pas d'informations",
+                            ) {
+                                IptvSettingsRepository.addPlayedIptvKey(
+                                    "iptv:${channel.streamId}",
+                                    "iptv:${channel.streamId}",
+                                )
+                                onPlay(
+                                    channel.name,
+                                    channel.streamId,
+                                    XtreamClient.liveStreamUrl(channel.streamId),
+                                    "tv",
+                                )
+                            }
                         }
                     }
-                }
                 }
             }
         }
@@ -253,6 +421,77 @@ internal fun LiveTvScreen(
 }
 
 private enum class VodType { Movies, Series }
+
+/**
+ * One VOD shelf: section header ("Ajouts récents - <group>") plus a
+ * horizontally scrollable row of poster cards with titles below.
+ * Items load on first composition and are cached per (type, category).
+ */
+@Composable
+private fun VodSectionShelf(
+    category: XtreamCategory,
+    vodType: VodType,
+    status: Int?,
+    movies: List<XtreamVodStream>?,
+    series: List<XtreamSeries>?,
+    onLoad: () -> Unit,
+    onOpenCategory: () -> Unit,
+    onPlayMovie: (XtreamVodStream) -> Unit,
+    onOpenSeries: (XtreamSeries) -> Unit,
+) {
+    LaunchedEffect(category.categoryId, vodType) { onLoad() }
+    val shownMovies = if (vodType == VodType.Movies) movies.orEmpty().take(20) else emptyList()
+    val shownSeries = if (vodType == VodType.Series) series.orEmpty().take(20) else emptyList()
+    // Skip sections that loaded but are empty; loading/failed sections still
+    // render their header so the user sees progress or can retry.
+    if (status == 1 && shownMovies.isEmpty() && shownSeries.isEmpty()) return
+    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Ajouts récents - ${category.categoryName}",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onOpenCategory) { Text(">") }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        when (status) {
+            0, null -> Box(
+                modifier = Modifier.fillMaxWidth().height(120.dp),
+                contentAlignment = Alignment.Center,
+            ) { CircularProgressIndicator() }
+            2 -> TextButton(onClick = onLoad) { Text("Retry") }
+            else -> {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (vodType == VodType.Movies) {
+                        items(shownMovies, key = { it.streamId }) { movie ->
+                            IptvPosterCard(
+                                imageUrl = movie.streamIcon,
+                                title = movie.name,
+                                onClick = { onPlayMovie(movie) },
+                                modifier = Modifier.width(120.dp),
+                            )
+                        }
+                    } else {
+                        items(shownSeries, key = { it.seriesId }) { series ->
+                            IptvPosterCard(
+                                imageUrl = series.cover,
+                                title = series.name,
+                                onClick = { onOpenSeries(series) },
+                                modifier = Modifier.width(120.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 internal fun VodScreen(
@@ -304,6 +543,11 @@ internal fun VodScreen(
     var query by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
     var failed by remember { mutableStateOf(false) }
+    // Per-section shelf caches, keyed by category id, plus a status map keyed
+    // by "Type:categoryId" (0 = loading, 1 = ok, 2 = failed).
+    val movieSections = remember { mutableStateMapOf<String, List<XtreamVodStream>>() }
+    val seriesSections = remember { mutableStateMapOf<String, List<XtreamSeries>>() }
+    val sectionStatus = remember { mutableStateMapOf<String, Int>() }
     val scope = rememberCoroutineScope()
 
     fun loadCategories() {
@@ -353,12 +597,60 @@ internal fun VodScreen(
         }
     }
 
+    fun loadSection(category: XtreamCategory) {
+        val key = vodType.name + ":" + category.categoryId
+        if (sectionStatus[key] == 1) return
+        sectionStatus[key] = 0
+        scope.launch {
+            try {
+                if (vodType == VodType.Movies) {
+                    movieSections[category.categoryId] =
+                        XtreamClient.vodStreams(category.categoryId)
+                } else {
+                    seriesSections[category.categoryId] =
+                        XtreamClient.series(category.categoryId)
+                }
+                sectionStatus[key] = 1
+            } catch (_: Exception) {
+                sectionStatus[key] = 2
+            }
+        }
+    }
+
     fun retry() {
         when {
             selectedSeries != null -> loadEpisodes(selectedSeries!!)
             selectedCategory != null -> loadItems(selectedCategory!!)
             else -> loadCategories()
         }
+    }
+
+    fun openCategory(category: XtreamCategory) {
+        selectedCategory = category
+        query = ""
+        loadItems(category)
+    }
+
+    fun playMovie(movie: XtreamVodStream) {
+        IptvSettingsRepository.addPlayedIptvKey(
+            "iptv:${movie.streamId}",
+            "iptv:${movie.streamId}",
+        )
+        onPlay(
+            movie.name,
+            movie.streamId,
+            XtreamClient.movieStreamUrl(
+                movie.streamId,
+                movie.containerExtension,
+            ),
+            "movie",
+        )
+    }
+
+    fun openSeries(series: XtreamSeries) {
+        selectedSeries = series
+        seriesInfo = null
+        loadEpisodes(series)
     }
 
     LaunchedEffect(Unit) { loadCategories() }
@@ -407,36 +699,41 @@ internal fun VodScreen(
                 if (seasons.isEmpty()) {
                     IptvEmpty(message = "No episodes found", onRetry = { loadEpisodes(series) })
                 } else {
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    seasons.forEach { (season, episodes) ->
-                        item(key = "season-$season") {
-                            Text(
-                                text = "Season $season",
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.padding(vertical = 8.dp),
-                            )
-                        }
-                        items(episodes, key = { it.id }) { episode ->
-                            val episodeTitle = episode.title?.takeIf { it.isNotBlank() }
-                                ?: "Episode ${episode.episodeNum ?: ""}"
-                            IptvRow(iconUrl = null, name = episodeTitle) {
-                                IptvSettingsRepository.addPlayedIptvKey(
-                                    "iptv:${episode.id}",
-                                    "iptv:${episode.id}",
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        seasons.forEach { (season, episodes) ->
+                            item(key = "season-$season") {
+                                Text(
+                                    text = "Season $season",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(vertical = 8.dp),
                                 )
-                                onPlay(
-                                    "${series.name} - $episodeTitle",
-                                    episode.id,
-                                    XtreamClient.episodeStreamUrl(
+                            }
+                            items(episodes, key = { it.id }) { episode ->
+                                val episodeTitle = episode.title?.takeIf { it.isNotBlank() }
+                                    ?: "Episode ${episode.episodeNum ?: ""}"
+                                IptvChannelRow(
+                                    iconUrl = null,
+                                    name = episodeTitle,
+                                    infoLine = "Episode ${episode.episodeNum ?: ""}",
+                                ) {
+                                    IptvSettingsRepository.addPlayedIptvKey(
+                                        "iptv:${episode.id}",
+                                        "iptv:${episode.id}",
+                                    )
+                                    onPlay(
+                                        "${series.name} - $episodeTitle",
                                         episode.id,
-                                        episode.containerExtension,
-                                    ),
-                                    "series",
-                                )
+                                        XtreamClient.episodeStreamUrl(
+                                            episode.id,
+                                            episode.containerExtension,
+                                        ),
+                                        "series",
+                                    )
+                                }
                             }
                         }
                     }
-                }
                 }
             }
             selectedCategory != null -> {
@@ -454,25 +751,21 @@ internal fun VodScreen(
                     } else if (shown.isEmpty()) {
                         Text("No results")
                     } else {
-                    LazyColumn(modifier = Modifier.weight(1f)) {
-                        items(shown, key = { it.streamId }) { movie ->
-                            IptvRow(iconUrl = movie.streamIcon, name = movie.name) {
-                                IptvSettingsRepository.addPlayedIptvKey(
-                                    "iptv:${movie.streamId}",
-                                    "iptv:${movie.streamId}",
-                                )
-                                onPlay(
-                                    movie.name,
-                                    movie.streamId,
-                                    XtreamClient.movieStreamUrl(
-                                        movie.streamId,
-                                        movie.containerExtension,
-                                    ),
-                                    "movie",
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 120.dp),
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            items(shown, key = { it.streamId }) { movie ->
+                                IptvPosterCard(
+                                    imageUrl = movie.streamIcon,
+                                    title = movie.name,
+                                    onClick = { playMovie(movie) },
+                                    modifier = Modifier.fillMaxWidth(),
                                 )
                             }
                         }
-                    }
                     }
                 } else {
                     val shown = seriesList.orEmpty().filter {
@@ -483,15 +776,21 @@ internal fun VodScreen(
                     } else if (shown.isEmpty()) {
                         Text("No results")
                     } else {
-                    LazyColumn(modifier = Modifier.weight(1f)) {
-                        items(shown, key = { it.seriesId }) { series ->
-                            IptvRow(iconUrl = series.cover, name = series.name) {
-                                selectedSeries = series
-                                seriesInfo = null
-                                loadEpisodes(series)
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 120.dp),
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            items(shown, key = { it.seriesId }) { series ->
+                                IptvPosterCard(
+                                    imageUrl = series.cover,
+                                    title = series.name,
+                                    onClick = { openSeries(series) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
                             }
                         }
-                    }
                     }
                 }
             }
@@ -504,15 +803,21 @@ internal fun VodScreen(
                 if (list.isEmpty()) {
                     IptvEmpty(message = "No items found", onRetry = { loadCategories() })
                 } else {
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(list, key = { it.categoryId }) { category ->
-                        IptvRow(iconUrl = null, name = category.categoryName) {
-                            selectedCategory = category
-                            query = ""
-                            loadItems(category)
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        items(list, key = { it.categoryId }) { category ->
+                            VodSectionShelf(
+                                category = category,
+                                vodType = vodType,
+                                status = sectionStatus[vodType.name + ":" + category.categoryId],
+                                movies = movieSections[category.categoryId],
+                                series = seriesSections[category.categoryId],
+                                onLoad = { loadSection(category) },
+                                onOpenCategory = { openCategory(category) },
+                                onPlayMovie = ::playMovie,
+                                onOpenSeries = ::openSeries,
+                            )
                         }
                     }
-                }
                 }
             }
         }
