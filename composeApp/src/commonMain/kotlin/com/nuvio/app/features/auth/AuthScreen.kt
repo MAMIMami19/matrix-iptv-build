@@ -640,7 +640,7 @@ private fun AuthBrandLockup(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Image(
-            painter = painterResource(Res.drawable.login_promo_banner),
+            painter = painterResource(Res.drawable.app_login_promo),
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
