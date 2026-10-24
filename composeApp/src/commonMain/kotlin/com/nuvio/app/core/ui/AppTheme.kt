@@ -30,6 +30,17 @@ enum class AppTheme {
     AMBER,
     ROSE,
     WHITE,
+    SHOWMAX,
+    OSN,
+    NETFLIX,
+    APPLE_TV,
+    MAX,
+    SHAHID,
+    PARAMOUNT,
+    DISNEY,
+    STARZPLAY,
+    PRIME,
+    CANAL,
 }
 
 val AppTheme.labelRes: StringResource
@@ -47,4 +58,15 @@ val AppTheme.labelRes: StringResource
         AppTheme.AMBER -> Res.string.theme_amber
         AppTheme.ROSE -> Res.string.theme_rose
         AppTheme.WHITE -> Res.string.theme_white
+        AppTheme.SHOWMAX -> Res.string.theme_showmax
+        AppTheme.OSN -> Res.string.theme_osn
+        AppTheme.NETFLIX -> Res.string.theme_netflix
+        AppTheme.APPLE_TV -> Res.string.theme_apple_tv
+        AppTheme.MAX -> Res.string.theme_max
+        AppTheme.SHAHID -> Res.string.theme_shahid
+        AppTheme.PARAMOUNT -> Res.string.theme_paramount
+        AppTheme.DISNEY -> Res.string.theme_disney
+        AppTheme.STARZPLAY -> Res.string.theme_starzplay
+        AppTheme.PRIME -> Res.string.theme_prime
+        AppTheme.CANAL -> Res.string.theme_canal
     }

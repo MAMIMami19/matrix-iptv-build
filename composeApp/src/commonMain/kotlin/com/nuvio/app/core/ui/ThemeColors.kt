@@ -173,6 +173,149 @@ object ThemeColors {
         backgroundCard = Color(0xFF222222),
     )
 
+    val Showmax = ThemeColorPalette(
+        secondary = Color(0xFFFF0E62),
+        secondaryVariant = Color(0xFFFF7A1A),
+        accentGradient = listOf(Color(0xFFFF0E62), Color(0xFFFF7A1A)),
+        nativeAccentHex = "#FF0E62",
+        onSecondary = Color.White,
+        focusRing = Color(0xFFFF5C39),
+        focusBackground = Color(0xFF2A1428),
+        background = Color(0xFF07121E),
+        backgroundElevated = Color(0xFF0D1B2B),
+        backgroundCard = Color(0xFF131E30),
+    )
+
+    val Osn = ThemeColorPalette(
+        secondary = Color(0xFFFF00D4),
+        secondaryVariant = Color(0xFFC400A5),
+        accentGradient = listOf(Color(0xFFFF00D4)),
+        nativeAccentHex = "#FF00D4",
+        onSecondary = Color.White,
+        focusRing = Color(0xFFFF00D4),
+        focusBackground = Color(0xFF2E0226),
+        background = Color(0xFF000000),
+        backgroundElevated = Color(0xFF141414),
+        backgroundCard = Color(0xFF1F1F1F),
+    )
+
+    val Netflix = ThemeColorPalette(
+        secondary = Color(0xFFE50914),
+        secondaryVariant = Color(0xFFB00610),
+        accentGradient = listOf(Color(0xFFE50914)),
+        nativeAccentHex = "#E50914",
+        onSecondary = Color.White,
+        focusRing = Color(0xFFFFFFFF),
+        focusBackground = Color(0xFF33110F),
+        background = Color(0xFF141414),
+        backgroundElevated = Color(0xFF1F1F1F),
+        backgroundCard = Color(0xFF262626),
+    )
+
+    val AppleTv = ThemeColorPalette(
+        secondary = Color(0xFF1480EE),
+        secondaryVariant = Color(0xFF0A5CB8),
+        accentGradient = listOf(Color(0xFF1480EE)),
+        nativeAccentHex = "#1480EE",
+        onSecondary = Color.White,
+        focusRing = Color(0xFFFFFFFF),
+        focusBackground = Color(0xFF0D2138),
+        background = Color(0xFF000000),
+        backgroundElevated = Color(0xFF1A1A1A),
+        backgroundCard = Color(0xFF222222),
+    )
+
+    val Max = ThemeColorPalette(
+        secondary = Color(0xFF5D22BD),
+        secondaryVariant = Color(0xFF9D6BFF),
+        accentGradient = listOf(Color(0xFF2F1D7D), Color(0xFF5D22BD), Color(0xFF9D6BFF)),
+        nativeAccentHex = "#9D6BFF",
+        onSecondary = Color.White,
+        focusRing = Color(0xFFC4A8FF),
+        focusBackground = Color(0xFF241447),
+        background = Color(0xFF150A2E),
+        backgroundElevated = Color(0xFF21123F),
+        backgroundCard = Color(0xFF2A1850),
+    )
+
+    val Shahid = ThemeColorPalette(
+        secondary = Color(0xFFF72C5B),
+        secondaryVariant = Color(0xFFC72567),
+        accentGradient = listOf(Color(0xFFF72C5B), Color(0xFFE91E63)),
+        nativeAccentHex = "#F72C5B",
+        onSecondary = Color.White,
+        focusRing = Color(0xFFF72C5B),
+        focusBackground = Color(0xFF2E1020),
+        background = Color(0xFF101020),
+        backgroundElevated = Color(0xFF1E242F),
+        backgroundCard = Color(0xFF1C1C30),
+    )
+
+    val Paramount = ThemeColorPalette(
+        secondary = Color(0xFF0652DF),
+        secondaryVariant = Color(0xFF0064FF),
+        accentGradient = listOf(Color(0xFF0652DF)),
+        nativeAccentHex = "#0652DF",
+        onSecondary = Color.White,
+        focusRing = Color(0xFF4D9FFF),
+        focusBackground = Color(0xFF0A1E42),
+        background = Color(0xFF101010),
+        backgroundElevated = Color(0xFF161616),
+        backgroundCard = Color(0xFF1F1F1F),
+    )
+
+    val Disney = ThemeColorPalette(
+        secondary = Color(0xFF1288E8),
+        secondaryVariant = Color(0xFF0CC0DF),
+        accentGradient = listOf(Color(0xFF113CCF), Color(0xFF1288E8), Color(0xFF0CC0DF)),
+        nativeAccentHex = "#0CC0DF",
+        onSecondary = Color.White,
+        focusRing = Color(0xFFFFFFFF),
+        focusBackground = Color(0xFF0E2A4A),
+        background = Color(0xFF0C1B33),
+        backgroundElevated = Color(0xFF13263F),
+        backgroundCard = Color(0xFF1B3050),
+    )
+
+    val Starzplay = ThemeColorPalette(
+        secondary = Color(0xFF17B8C9),
+        secondaryVariant = Color(0xFF78F6F6),
+        accentGradient = listOf(Color(0xFF17B8C9), Color(0xFF78F6F6)),
+        nativeAccentHex = "#17B8C9",
+        onSecondary = Color(0xFF062A30),
+        focusRing = Color(0xFF78F6F6),
+        focusBackground = Color(0xFF07303A),
+        background = Color(0xFF000000),
+        backgroundElevated = Color(0xFF121212),
+        backgroundCard = Color(0xFF1A1A1A),
+    )
+
+    val Prime = ThemeColorPalette(
+        secondary = Color(0xFF00A8E1),
+        secondaryVariant = Color(0xFF0073A8),
+        accentGradient = listOf(Color(0xFF00A8E1)),
+        nativeAccentHex = "#00A8E1",
+        onSecondary = Color.White,
+        focusRing = Color(0xFF00A8E1),
+        focusBackground = Color(0xFF0A2A38),
+        background = Color(0xFF0F171E),
+        backgroundElevated = Color(0xFF1A242F),
+        backgroundCard = Color(0xFF232F3E),
+    )
+
+    val Canal = ThemeColorPalette(
+        secondary = Color(0xFFF43F5E),
+        secondaryVariant = Color(0xFFD8324E),
+        accentGradient = listOf(Color(0xFFD8324E), Color(0xFFF43F5E)),
+        nativeAccentHex = "#F43F5E",
+        onSecondary = Color.White,
+        focusRing = Color(0xFFF43F5E),
+        focusBackground = Color(0xFF2E0E16),
+        background = Color(0xFF000000),
+        backgroundElevated = Color(0xFF1C1C1D),
+        backgroundCard = Color(0xFF29292A),
+    )
+
     fun getColorPalette(
         theme: AppTheme,
         customColors: CustomThemeColors = CustomThemeColors.Default,
@@ -190,5 +333,16 @@ object ThemeColors {
         AppTheme.AMBER -> Amber
         AppTheme.ROSE -> Rose
         AppTheme.WHITE -> White
+        AppTheme.SHOWMAX -> Showmax
+        AppTheme.OSN -> Osn
+        AppTheme.NETFLIX -> Netflix
+        AppTheme.APPLE_TV -> AppleTv
+        AppTheme.MAX -> Max
+        AppTheme.SHAHID -> Shahid
+        AppTheme.PARAMOUNT -> Paramount
+        AppTheme.DISNEY -> Disney
+        AppTheme.STARZPLAY -> Starzplay
+        AppTheme.PRIME -> Prime
+        AppTheme.CANAL -> Canal
     }
 }

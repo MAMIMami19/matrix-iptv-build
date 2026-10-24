@@ -1410,6 +1410,17 @@
     <string name="theme_violet">Violet</string>
     <string name="theme_white">White</string>
     <string name="theme_custom">Custom</string>
+    <string name="theme_showmax">Showmax</string>
+    <string name="theme_osn">OSN+</string>
+    <string name="theme_netflix">Netflix</string>
+    <string name="theme_apple_tv">Apple TV</string>
+    <string name="theme_max">HBO Max</string>
+    <string name="theme_shahid">MBC Shahid</string>
+    <string name="theme_paramount">Paramount+</string>
+    <string name="theme_disney">Disney+</string>
+    <string name="theme_starzplay">STARZPLAY</string>
+    <string name="theme_prime">Prime Video</string>
+    <string name="theme_canal">myCANAL</string>
     <string name="custom_theme_title">Your custom gradient</string>
     <string name="custom_theme_subtitle">Choose three colors for your theme. Select a color to edit it.</string>
     <string name="custom_theme_edit">Edit custom theme</string>
