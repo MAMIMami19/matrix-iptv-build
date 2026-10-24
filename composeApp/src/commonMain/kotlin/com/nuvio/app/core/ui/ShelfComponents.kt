@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -78,6 +79,11 @@ fun <T> NuvioShelfSection(
     key: ((T) -> Any)? = null,
     animatePlacement: Boolean = false,
     state: LazyListState = rememberLazyListState(),
+    /**
+     * Custom header replacing the default title header (used by the platform
+     * logo rows). Null = default header.
+     */
+    headerContent: @Composable (() -> Unit)? = null,
     itemContent: @Composable (T) -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
@@ -88,7 +94,11 @@ fun <T> NuvioShelfSection(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(tokens.spacing.controlGap + NuvioTokens.Space.s2),
     ) {
-        if (title.isNotBlank()) {
+        if (headerContent != null) {
+            Box(modifier = Modifier.padding(horizontal = headerHorizontalPadding)) {
+                headerContent()
+            }
+        } else if (title.isNotBlank()) {
             NuvioShelfSectionHeader(
                 title = title,
                 modifier = Modifier.padding(horizontal = headerHorizontalPadding),
@@ -313,6 +323,55 @@ private fun RankNumber(rank: Int) {
             style = style.copy(drawStyle = Stroke(width = strokeWidth, join = StrokeJoin.Round)),
             color = Color.White,
         )
+    }
+}
+
+/**
+ * Official platform logo header, rendered from the platform's own image
+ * asset (never redrawn, recolored, or approximated). The logo replaces the
+ * platform-name text of the row header; the type suffix survives as a small
+ * label underneath so movie and series rows for the same platform stay
+ * distinguishable (true crime keeps its Arabic title as the small label).
+ * Uniform size for every platform: a full-width, 120dp-tall banner band —
+ * the Netflix banner treatment. Each image keeps its aspect ratio (Fit:
+ * never cropped or stretched) and is centered in the band. The whole header
+ * stays tappable for "view all" when the row provides one, so the row loses
+ * no navigation.
+ */
+@Composable
+internal fun PlatformLogoHeader(
+    assetFileName: String,
+    contentDescription: String?,
+    smallLabel: String? = null,
+    onViewAllClick: (() -> Unit)? = null,
+) {
+    val tokens = MaterialTheme.nuvio
+    val headerModifier = if (onViewAllClick != null) {
+        Modifier.clickable { onViewAllClick() }
+    } else {
+        Modifier
+    }
+    Column(modifier = headerModifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier.fillMaxWidth().height(120.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            AsyncImage(
+                model = "file:///android_asset/$assetFileName",
+                contentDescription = contentDescription,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+            )
+        }
+        if (smallLabel != null) {
+            Text(
+                text = smallLabel,
+                style = MaterialTheme.typography.labelMedium,
+                color = tokens.colors.textMuted,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+                    .padding(top = NuvioTokens.Space.s2),
+            )
+        }
     }
 }
 
