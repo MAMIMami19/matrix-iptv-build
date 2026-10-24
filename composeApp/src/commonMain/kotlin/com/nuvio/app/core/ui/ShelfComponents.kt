@@ -328,13 +328,13 @@ private fun RankNumber(rank: Int) {
 
 /**
  * Official platform logo header, rendered from the platform's own image
- * asset (never redrawn, recolored, or approximated). The logo replaces the
- * platform-name text of the row header; the type suffix survives as a small
- * label underneath so movie and series rows for the same platform stay
- * distinguishable (true crime keeps its Arabic title as the small label).
- * Uniform size for every platform: a full-width, 120dp-tall banner band —
- * the Netflix banner treatment. Each image keeps its aspect ratio (Fit:
- * never cropped or stretched) and is centered in the band. The whole header
+ * asset (never redrawn, recolored, or approximated). The header is a long
+ * rounded-rectangle chat bubble pinned to the FAR LEFT of the row (never
+ * centered, never alternating sides): the logo sits on the left inside the
+ * bubble and the type suffix on the right, so movie and series rows for the
+ * same platform stay distinguishable (true crime keeps its Arabic title as
+ * the small label). Each image keeps its aspect ratio (Fit: never cropped
+ * or stretched). Posters render underneath, unchanged. The whole bubble
  * stays tappable for "view all" when the row provides one, so the row loses
  * no navigation.
  */
@@ -351,26 +351,35 @@ internal fun PlatformLogoHeader(
     } else {
         Modifier
     }
-    Column(modifier = headerModifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier.fillMaxWidth().height(120.dp),
-            contentAlignment = Alignment.Center,
+    Box(
+        modifier = headerModifier.fillMaxWidth(),
+        contentAlignment = Alignment.CenterLeft,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(0.7f).height(64.dp)
+                .background(
+                    color = tokens.colors.surface,
+                    shape = RoundedCornerShape(20.dp),
+                )
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             AsyncImage(
                 model = "file:///android_asset/$assetFileName",
                 contentDescription = contentDescription,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.weight(1f, fill = false).height(48.dp),
                 contentScale = ContentScale.Fit,
             )
-        }
-        if (smallLabel != null) {
-            Text(
-                text = smallLabel,
-                style = MaterialTheme.typography.labelMedium,
-                color = tokens.colors.textMuted,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-                    .padding(top = NuvioTokens.Space.s2),
-            )
+            if (smallLabel != null) {
+                Text(
+                    text = smallLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = tokens.colors.textMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 12.dp),
+                )
+            }
         }
     }
 }

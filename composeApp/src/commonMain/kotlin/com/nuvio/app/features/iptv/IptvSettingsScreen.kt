@@ -4,12 +4,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -37,31 +34,35 @@ import androidx.compose.ui.unit.dp
 import com.nuvio.app.features.player.AvailableLanguageOptions
 import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.player.SubtitleCacheProvider
+import com.nuvio.app.features.profiles.PinEntryDialog
+import com.nuvio.app.features.profiles.PinVerifyResult
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 /**
  * IPTV / Live TV settings, copied from the reference IPTV app's settings.
  *
- * Deliberately absent (see IptvSettingsRepository): biometric unlock (no
- * biometric API in the app) and in-app PiP (no mini-player exists).
- * The online-subtitles login fields are user-filled only, never prefilled.
+ * This is a section inside the app's normal (Playback) settings page — not a
+ * standalone tab-gear page: the copied parameters live with the regular
+ * settings. Deliberately absent (see IptvSettingsRepository): biometric
+ * unlock (no biometric API in the app) and in-app PiP (no mini-player
+ * exists). The online-subtitle sources are user-filled only, never
+ * prefilled, and there may be several of them (not a single login).
  */
 @Composable
-internal fun IptvSettingsScreen(
-    onBack: () -> Unit,
+internal fun IptvSettingsSection(
     modifier: Modifier = Modifier,
 ) {
     val lockAdult by IptvSettingsRepository.lockAdultCategories.collectAsState()
     val clearOnClose by IptvSettingsRepository.clearHistoryOnClose.collectAsState()
     val lockSettings by IptvSettingsRepository.lockSettings.collectAsState()
     val pin by IptvSettingsRepository.pin.collectAsState()
+    val sessionUnlocked by IptvSettingsRepository.sessionUnlocked.collectAsState()
     val systemPip by IptvSettingsRepository.systemPipEnabled.collectAsState()
     val osdDurationMs by IptvSettingsRepository.osdDurationMs.collectAsState()
     val audioLanguage by IptvSettingsRepository.audioLanguage.collectAsState()
     val subtitleLanguage by IptvSettingsRepository.subtitleLanguage.collectAsState()
-    val onlineUsername by IptvSettingsRepository.onlineSubtitleUsername.collectAsState()
-    val onlinePassword by IptvSettingsRepository.onlineSubtitlePassword.collectAsState()
+    val subtitleSources by IptvSettingsRepository.onlineSubtitleSources.collectAsState()
     val preferredLanguages by IptvSettingsRepository.onlineSubtitlePreferredLanguages.collectAsState()
     val playerSettings by PlayerSettingsRepository.uiState.collectAsState()
     val scope = rememberCoroutineScope()
@@ -69,9 +70,7 @@ internal fun IptvSettingsScreen(
     var showSetPin by remember { mutableStateOf(false) }
     var pendingAfterPin by remember { mutableStateOf<(() -> Unit)?>(null) }
     var cacheCleared by remember { mutableStateOf(false) }
-    // NOTE: these must live here, not inside the LazyColumn scope below —
-    // the LazyListScope lambda is not a @Composable context, so remember
-    // calls placed between item blocks fail compilation.
+    var showUnlockPin by remember { mutableStateOf(false) }
     val labelByCode = remember {
         AvailableLanguageOptions.associate { it.code to it.labelRes }
     }
@@ -84,6 +83,10 @@ internal fun IptvSettingsScreen(
 
     // Synchronous + idempotent: avoids one frame of default values.
     IptvSettingsRepository.ensureLoaded()
+
+    // "Lock settings" gates this section (not the tabs): the tabs keep their
+    // own PIN gate, this gate only guards the settings themselves.
+    val settingsLocked = lockSettings && pin.isNotEmpty() && !sessionUnlocked
 
     fun requirePin(enable: () -> Unit) {
         if (pin.isEmpty()) {
@@ -108,155 +111,168 @@ internal fun IptvSettingsScreen(
             },
         )
     }
+    if (showUnlockPin) {
+        PinEntryDialog(
+            profileName = "IPTV",
+            onVerify = { entered -> PinVerifyResult(unlocked = entered == pin) },
+            onDismiss = { showUnlockPin = false },
+            onVerified = {
+                IptvSettingsRepository.setSessionUnlocked(true)
+                showUnlockPin = false
+            },
+        )
+    }
 
-    LazyColumn(modifier = modifier.fillMaxSize().padding(16.dp)) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onBack) { Text("Back") }
-                Text("IPTV settings", style = MaterialTheme.typography.titleLarge)
-            }
+    Column(modifier = modifier.fillMaxWidth().padding(16.dp)) {
+        Text("IPTV", style = MaterialTheme.typography.titleLarge)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (settingsLocked) {
+            Text("IPTV settings are locked")
             Spacer(modifier = Modifier.height(8.dp))
+            Button(onClick = { showUnlockPin = true }) { Text("Unlock") }
+            return@Column
         }
 
-        item { IptvSettingsSection("Parental options") }
-        item {
-            IptvToggleRow(
-                label = "Lock adult categories",
-                subtitle = "Hide adult categories until unlocked",
-                checked = lockAdult,
-                onCheckedChange = { on ->
-                    if (on) {
-                        requirePin { IptvSettingsRepository.setLockAdultCategories(true) }
-                    } else {
-                        IptvSettingsRepository.setLockAdultCategories(false)
-                    }
-                },
-            )
-        }
-        item {
-            IptvToggleRow(
-                label = "Clear watch history on close",
-                subtitle = "Remove IPTV watch progress when leaving the tab",
-                checked = clearOnClose,
-                onCheckedChange = IptvSettingsRepository::setClearHistoryOnClose,
-            )
-        }
-        item {
-            IptvToggleRow(
-                label = "Lock settings",
-                subtitle = "Require the PIN to open IPTV settings",
-                checked = lockSettings,
-                onCheckedChange = { on ->
-                    if (on) {
-                        requirePin { IptvSettingsRepository.setLockSettings(true) }
-                    } else {
-                        IptvSettingsRepository.setLockSettings(false)
-                    }
-                },
-            )
-        }
-        item {
-            Button(
-                onClick = { showSetPin = true },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            ) { Text("Change lock PIN") }
-        }
+        IptvSettingsSectionTitle("Parental options")
+        IptvToggleRow(
+            label = "Lock adult categories",
+            subtitle = "Hide adult categories until unlocked",
+            checked = lockAdult,
+            onCheckedChange = { on ->
+                if (on) {
+                    requirePin { IptvSettingsRepository.setLockAdultCategories(true) }
+                } else {
+                    IptvSettingsRepository.setLockAdultCategories(false)
+                }
+            },
+        )
+        IptvToggleRow(
+            label = "Clear watch history on close",
+            subtitle = "Remove IPTV watch progress when leaving the tab",
+            checked = clearOnClose,
+            onCheckedChange = IptvSettingsRepository::setClearHistoryOnClose,
+        )
+        IptvToggleRow(
+            label = "Lock settings",
+            subtitle = "Require the PIN to open IPTV settings",
+            checked = lockSettings,
+            onCheckedChange = { on ->
+                if (on) {
+                    requirePin { IptvSettingsRepository.setLockSettings(true) }
+                } else {
+                    IptvSettingsRepository.setLockSettings(false)
+                }
+            },
+        )
+        Button(
+            onClick = { showSetPin = true },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        ) { Text("Change lock PIN") }
 
-        item { IptvSettingsSection("Player options") }
-        item {
-            IptvToggleRow(
-                label = "System PiP",
-                subtitle = "Allow picture-in-picture when leaving the player",
-                checked = systemPip,
-                onCheckedChange = IptvSettingsRepository::setSystemPipEnabled,
-            )
-        }
-        item {
-            Text("OSD display duration", style = MaterialTheme.typography.titleSmall)
-            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                listOf(3000 to "3s", 5000 to "5s", 10000 to "10s").forEach { (ms, label) ->
-                    val selected = osdDurationMs == ms
-                    if (selected) {
-                        Button(
-                            onClick = { IptvSettingsRepository.setOsdDurationMs(ms) },
-                            modifier = Modifier.padding(end = 8.dp),
-                        ) { Text(label) }
-                    } else {
-                        OutlinedButton(
-                            onClick = { IptvSettingsRepository.setOsdDurationMs(ms) },
-                            modifier = Modifier.padding(end = 8.dp),
-                        ) { Text(label) }
-                    }
+        IptvSettingsSectionTitle("Player options")
+        IptvToggleRow(
+            label = "System PiP",
+            subtitle = "Allow picture-in-picture when leaving the player",
+            checked = systemPip,
+            onCheckedChange = IptvSettingsRepository::setSystemPipEnabled,
+        )
+        Text("OSD display duration", style = MaterialTheme.typography.titleSmall)
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            listOf(3000 to "3s", 5000 to "5s", 10000 to "10s").forEach { (ms, label) ->
+                val selected = osdDurationMs == ms
+                if (selected) {
+                    Button(
+                        onClick = { IptvSettingsRepository.setOsdDurationMs(ms) },
+                        modifier = Modifier.padding(end = 8.dp),
+                    ) { Text(label) }
+                } else {
+                    OutlinedButton(
+                        onClick = { IptvSettingsRepository.setOsdDurationMs(ms) },
+                        modifier = Modifier.padding(end = 8.dp),
+                    ) { Text(label) }
                 }
             }
         }
-        item {
-            IptvToggleRow(
-                label = "Auto-play series",
-                subtitle = "Auto-play the next episode where supported",
-                checked = playerSettings.streamAutoPlayNextEpisodeEnabled,
-                onCheckedChange = PlayerSettingsRepository::setStreamAutoPlayNextEpisodeEnabled,
-            )
-        }
+        IptvToggleRow(
+            label = "Auto-play series",
+            subtitle = "Auto-play the next episode where supported",
+            checked = playerSettings.streamAutoPlayNextEpisodeEnabled,
+            onCheckedChange = PlayerSettingsRepository::setStreamAutoPlayNextEpisodeEnabled,
+        )
 
-        item { IptvSettingsSection("Audio & subtitles") }
-        item {
-            IptvLanguageDropdown(
-                label = "Audio language",
-                selectedCode = audioLanguage,
-                onCodeSelected = IptvSettingsRepository::setAudioLanguage,
-            )
-        }
-        item {
-            IptvLanguageDropdown(
-                label = "Subtitle language",
-                selectedCode = subtitleLanguage,
-                onCodeSelected = IptvSettingsRepository::setSubtitleLanguage,
-            )
-        }
+        IptvSettingsSectionTitle("Audio & subtitles")
+        IptvLanguageDropdown(
+            label = "Audio language",
+            selectedCode = audioLanguage,
+            onCodeSelected = IptvSettingsRepository::setAudioLanguage,
+        )
+        IptvLanguageDropdown(
+            label = "Subtitle language",
+            selectedCode = subtitleLanguage,
+            onCodeSelected = IptvSettingsRepository::setSubtitleLanguage,
+        )
 
-        item { IptvSettingsSection("Online subtitles") }
-        item {
+        IptvSettingsSectionTitle("Online subtitles")
+        subtitleSources.forEachIndexed { index, source ->
+            Text(
+                text = "Source ${index + 1}",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(top = 8.dp),
+            )
             OutlinedTextField(
-                value = onlineUsername,
-                onValueChange = IptvSettingsRepository::setOnlineSubtitleUsername,
+                value = source.username,
+                onValueChange = { newUsername ->
+                    IptvSettingsRepository.updateOnlineSubtitleSource(
+                        index,
+                        newUsername,
+                        source.password,
+                    )
+                },
                 label = { Text("Username") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             )
-        }
-        item {
             OutlinedTextField(
-                value = onlinePassword,
-                onValueChange = IptvSettingsRepository::setOnlineSubtitlePassword,
+                value = source.password,
+                onValueChange = { newPassword ->
+                    IptvSettingsRepository.updateOnlineSubtitleSource(
+                        index,
+                        source.username,
+                        newPassword,
+                    )
+                },
                 label = { Text("Password") },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             )
+            TextButton(
+                onClick = { IptvSettingsRepository.removeOnlineSubtitleSource(index) },
+            ) { Text("Remove source") }
         }
-        item {
-            Button(
-                onClick = {
-                    scope.launch {
-                        SubtitleCacheProvider.clearSubtitleCache()
-                        cacheCleared = true
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            ) { Text("Clear subtitle cache") }
-            if (cacheCleared) {
-                Text("Subtitle cache cleared", style = MaterialTheme.typography.bodySmall)
-            }
+        OutlinedButton(
+            onClick = { IptvSettingsRepository.addOnlineSubtitleSource() },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        ) { Text("Add source") }
+        Button(
+            onClick = {
+                scope.launch {
+                    SubtitleCacheProvider.clearSubtitleCache()
+                    cacheCleared = true
+                }
+            },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        ) { Text("Clear subtitle cache") }
+        if (cacheCleared) {
+            Text("Subtitle cache cleared", style = MaterialTheme.typography.bodySmall)
         }
-        item {
-            Text(
-                text = "Preferred languages",
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-        items(orderedCodes, key = { it }) { code ->
+        Text(
+            text = "Preferred languages",
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        orderedCodes.forEach { code ->
             // Kurdish has no string resource in the app; use a literal label.
             val label = if (code == "ku") {
                 "Kurdish"
@@ -286,7 +302,7 @@ internal fun IptvSettingsScreen(
 }
 
 @Composable
-private fun IptvSettingsSection(title: String) {
+private fun IptvSettingsSectionTitle(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleMedium,

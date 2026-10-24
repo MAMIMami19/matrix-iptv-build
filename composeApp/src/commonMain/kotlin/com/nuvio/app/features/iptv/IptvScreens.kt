@@ -62,6 +62,19 @@ private fun IptvError(onRetry: () -> Unit) {
 }
 
 @Composable
+private fun IptvEmpty(message: String, onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+        Text(message)
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(onClick = onRetry) { Text("Retry") }
+    }
+}
+
+@Composable
 private fun IptvRow(iconUrl: String?, name: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp),
@@ -107,11 +120,8 @@ internal fun LiveTvScreen(
     val sessionUnlocked by IptvSettingsRepository.sessionUnlocked.collectAsState()
     val lockAdult by IptvSettingsRepository.lockAdultCategories.collectAsState()
     val clearOnClose by IptvSettingsRepository.clearHistoryOnClose.collectAsState()
-    val lockSettings by IptvSettingsRepository.lockSettings.collectAsState()
     val needsPin = pin.isNotEmpty() && !sessionUnlocked
     val adultHidden = lockAdult && !sessionUnlocked
-    var showSettings by remember { mutableStateOf(false) }
-    var showSettingsPin by remember { mutableStateOf(false) }
     var wasSelected by remember { mutableStateOf(isSelectedTab) }
 
     // Clear-on-close: when the tab loses selection, wipe this session's IPTV
@@ -125,22 +135,6 @@ internal fun LiveTvScreen(
         wasSelected = isSelectedTab
     }
 
-    if (showSettingsPin) {
-        PinEntryDialog(
-            profileName = "IPTV",
-            onVerify = { entered -> PinVerifyResult(unlocked = entered == pin) },
-            onDismiss = { showSettingsPin = false },
-            onVerified = {
-                IptvSettingsRepository.setSessionUnlocked(true)
-                showSettingsPin = false
-                showSettings = true
-            },
-        )
-    }
-    if (showSettings) {
-        IptvSettingsScreen(onBack = { showSettings = false })
-        return
-    }
     if (needsPin) {
         Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
             Text("Live TV", style = MaterialTheme.typography.titleLarge)
@@ -193,22 +187,10 @@ internal fun LiveTvScreen(
     LaunchedEffect(Unit) { loadCategories() }
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "Live TV",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(
-                onClick = {
-                    if (lockSettings && pin.isNotEmpty() && !sessionUnlocked) {
-                        showSettingsPin = true
-                    } else {
-                        showSettings = true
-                    }
-                },
-            ) { Text("Settings") }
-        }
+        Text(
+            "Live TV",
+            style = MaterialTheme.typography.titleLarge,
+        )
         Spacer(modifier = Modifier.height(12.dp))
         when {
             loading -> IptvLoading()
@@ -219,6 +201,9 @@ internal fun LiveTvScreen(
             selected == null -> {
                 val list = categories.orEmpty()
                     .filterNot { adultHidden && IptvSettingsRepository.isAdultCategory(it.categoryName) }
+                if (list.isEmpty()) {
+                    IptvEmpty(message = "No channels found", onRetry = { loadCategories() })
+                } else {
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(list, key = { it.categoryId }) { category ->
                         IptvRow(iconUrl = null, name = category.categoryName) {
@@ -228,6 +213,7 @@ internal fun LiveTvScreen(
                             loadChannels(category)
                         }
                     }
+                }
                 }
             }
             else -> {
@@ -239,6 +225,11 @@ internal fun LiveTvScreen(
                 val shown = channels.orEmpty().filter {
                     query.isBlank() || it.name.contains(query, ignoreCase = true)
                 }
+                if (shown.isEmpty() && query.isBlank()) {
+                    IptvEmpty(message = "No channels found", onRetry = { loadChannels(category) })
+                } else if (shown.isEmpty()) {
+                    Text("No results")
+                } else {
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(shown, key = { it.streamId }) { channel ->
                         IptvRow(iconUrl = channel.streamIcon, name = channel.name) {
@@ -254,6 +245,7 @@ internal fun LiveTvScreen(
                             )
                         }
                     }
+                }
                 }
             }
         }
@@ -273,11 +265,8 @@ internal fun VodScreen(
     val sessionUnlocked by IptvSettingsRepository.sessionUnlocked.collectAsState()
     val lockAdult by IptvSettingsRepository.lockAdultCategories.collectAsState()
     val clearOnClose by IptvSettingsRepository.clearHistoryOnClose.collectAsState()
-    val lockSettings by IptvSettingsRepository.lockSettings.collectAsState()
     val needsPin = pin.isNotEmpty() && !sessionUnlocked
     val adultHidden = lockAdult && !sessionUnlocked
-    var showSettings by remember { mutableStateOf(false) }
-    var showSettingsPin by remember { mutableStateOf(false) }
     var wasSelected by remember { mutableStateOf(isSelectedTab) }
 
     LaunchedEffect(isSelectedTab, clearOnClose) {
@@ -289,22 +278,6 @@ internal fun VodScreen(
         wasSelected = isSelectedTab
     }
 
-    if (showSettingsPin) {
-        PinEntryDialog(
-            profileName = "IPTV",
-            onVerify = { entered -> PinVerifyResult(unlocked = entered == pin) },
-            onDismiss = { showSettingsPin = false },
-            onVerified = {
-                IptvSettingsRepository.setSessionUnlocked(true)
-                showSettingsPin = false
-                showSettings = true
-            },
-        )
-    }
-    if (showSettings) {
-        IptvSettingsScreen(onBack = { showSettings = false })
-        return
-    }
     if (needsPin) {
         Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
             Text("IPTV", style = MaterialTheme.typography.titleLarge)
@@ -391,22 +364,10 @@ internal fun VodScreen(
     LaunchedEffect(Unit) { loadCategories() }
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "IPTV",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(
-                onClick = {
-                    if (lockSettings && pin.isNotEmpty() && !sessionUnlocked) {
-                        showSettingsPin = true
-                    } else {
-                        showSettings = true
-                    }
-                },
-            ) { Text("Settings") }
-        }
+        Text(
+            "IPTV",
+            style = MaterialTheme.typography.titleLarge,
+        )
         Spacer(modifier = Modifier.height(12.dp))
         Row {
             TextButton(
@@ -443,6 +404,9 @@ internal fun VodScreen(
                 }
                 val seasons = (seriesInfo?.episodes.orEmpty()).entries
                     .sortedBy { (season, _) -> season.toIntOrNull() ?: 0 }
+                if (seasons.isEmpty()) {
+                    IptvEmpty(message = "No episodes found", onRetry = { loadEpisodes(series) })
+                } else {
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     seasons.forEach { (season, episodes) ->
                         item(key = "season-$season") {
@@ -473,8 +437,10 @@ internal fun VodScreen(
                         }
                     }
                 }
+                }
             }
             selectedCategory != null -> {
+                val category = selectedCategory!!
                 TextButton(onClick = { selectedCategory = null; query = "" }) {
                     Text("Back")
                 }
@@ -483,6 +449,11 @@ internal fun VodScreen(
                     val shown = movies.orEmpty().filter {
                         query.isBlank() || it.name.contains(query, ignoreCase = true)
                     }
+                    if (shown.isEmpty() && query.isBlank()) {
+                        IptvEmpty(message = "No items found", onRetry = { loadItems(category) })
+                    } else if (shown.isEmpty()) {
+                        Text("No results")
+                    } else {
                     LazyColumn(modifier = Modifier.weight(1f)) {
                         items(shown, key = { it.streamId }) { movie ->
                             IptvRow(iconUrl = movie.streamIcon, name = movie.name) {
@@ -502,10 +473,16 @@ internal fun VodScreen(
                             }
                         }
                     }
+                    }
                 } else {
                     val shown = seriesList.orEmpty().filter {
                         query.isBlank() || it.name.contains(query, ignoreCase = true)
                     }
+                    if (shown.isEmpty() && query.isBlank()) {
+                        IptvEmpty(message = "No items found", onRetry = { loadItems(category) })
+                    } else if (shown.isEmpty()) {
+                        Text("No results")
+                    } else {
                     LazyColumn(modifier = Modifier.weight(1f)) {
                         items(shown, key = { it.seriesId }) { series ->
                             IptvRow(iconUrl = series.cover, name = series.name) {
@@ -515,6 +492,7 @@ internal fun VodScreen(
                             }
                         }
                     }
+                    }
                 }
             }
             else -> {
@@ -523,6 +501,9 @@ internal fun VodScreen(
                 } else {
                     seriesCats.orEmpty()
                 }.filterNot { adultHidden && IptvSettingsRepository.isAdultCategory(it.categoryName) }
+                if (list.isEmpty()) {
+                    IptvEmpty(message = "No items found", onRetry = { loadCategories() })
+                } else {
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(list, key = { it.categoryId }) { category ->
                         IptvRow(iconUrl = null, name = category.categoryName) {
@@ -531,6 +512,7 @@ internal fun VodScreen(
                             loadItems(category)
                         }
                     }
+                }
                 }
             }
         }

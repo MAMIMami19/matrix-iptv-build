@@ -15,6 +15,7 @@ actual object IptvSettingsStorage {
     private const val subtitleLanguageKey = "iptv_subtitle_language"
     private const val onlineSubtitleUsernameKey = "iptv_online_subtitle_username"
     private const val onlineSubtitlePasswordKey = "iptv_online_subtitle_password"
+    private const val onlineSubtitleSourcesKey = "iptv_online_subtitle_sources"
     private const val onlineSubtitlePreferredLanguagesKey = "iptv_online_subtitle_preferred_languages"
 
     private var preferences: SharedPreferences? = null
@@ -66,6 +67,8 @@ actual object IptvSettingsStorage {
     actual fun saveOnlineSubtitleUsername(username: String) = saveString(onlineSubtitleUsernameKey, username)
     actual fun loadOnlineSubtitlePassword(): String? = loadString(onlineSubtitlePasswordKey)
     actual fun saveOnlineSubtitlePassword(password: String) = saveString(onlineSubtitlePasswordKey, password)
+    actual fun loadOnlineSubtitleSources(): String? = loadString(onlineSubtitleSourcesKey)
+    actual fun saveOnlineSubtitleSources(json: String) = saveString(onlineSubtitleSourcesKey, json)
     actual fun loadOnlineSubtitlePreferredLanguages(): String? = loadString(onlineSubtitlePreferredLanguagesKey)
     actual fun saveOnlineSubtitlePreferredLanguages(codesCsv: String) = saveString(onlineSubtitlePreferredLanguagesKey, codesCsv)
 }

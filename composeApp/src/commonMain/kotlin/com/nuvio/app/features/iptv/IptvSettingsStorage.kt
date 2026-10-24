@@ -3,8 +3,8 @@ package com.nuvio.app.features.iptv
 /**
  * App-level (not profile-scoped) persistence for the IPTV / Live TV settings.
  *
- * The online-subtitles login below is user-filled only: it is never prefilled
- * and no credential from anywhere else is ever written here.
+ * The online-subtitle sources below are user-filled only: they are never
+ * prefilled and no credential from anywhere else is ever written here.
  */
 internal expect object IptvSettingsStorage {
     fun loadLockAdultCategories(): Boolean?
@@ -27,6 +27,9 @@ internal expect object IptvSettingsStorage {
     fun saveOnlineSubtitleUsername(username: String)
     fun loadOnlineSubtitlePassword(): String?
     fun saveOnlineSubtitlePassword(password: String)
+    /** JSON array of online-subtitle sources (see OnlineSubtitleSource). */
+    fun loadOnlineSubtitleSources(): String?
+    fun saveOnlineSubtitleSources(json: String)
     fun loadOnlineSubtitlePreferredLanguages(): String?
     fun saveOnlineSubtitlePreferredLanguages(codesCsv: String)
 }

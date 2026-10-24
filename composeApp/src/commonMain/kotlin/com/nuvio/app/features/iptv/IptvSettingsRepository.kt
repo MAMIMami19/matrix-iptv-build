@@ -5,6 +5,16 @@ import com.nuvio.app.features.player.SubtitleLanguageOption
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
+/** One online-subtitle source account, filled in by the user (never prefilled). */
+@Serializable
+internal data class OnlineSubtitleSource(
+    val username: String = "",
+    val password: String = "",
+)
 
 /**
  * IPTV / Live TV settings, copied from the reference IPTV app's settings screens.
@@ -53,12 +63,14 @@ internal object IptvSettingsRepository {
     val subtitleLanguage: StateFlow<String> = _subtitleLanguage.asStateFlow()
     val subtitleLanguageValue: String get() = _subtitleLanguage.value
 
-    /** Online-subtitles login: user-filled only, never prefilled. */
-    private val _onlineSubtitleUsername = MutableStateFlow("")
-    val onlineSubtitleUsername: StateFlow<String> = _onlineSubtitleUsername.asStateFlow()
-
-    private val _onlineSubtitlePassword = MutableStateFlow("")
-    val onlineSubtitlePassword: StateFlow<String> = _onlineSubtitlePassword.asStateFlow()
+    /**
+     * Online-subtitle sources: MULTIPLE accounts, each filled in by the user
+     * (never prefilled). Stored as one JSON array; an earlier single login
+     * is migrated into a one-element list on first load.
+     */
+    private val _onlineSubtitleSources = MutableStateFlow<List<OnlineSubtitleSource>>(emptyList())
+    val onlineSubtitleSources: StateFlow<List<OnlineSubtitleSource>> =
+        _onlineSubtitleSources.asStateFlow()
 
     /**
      * Preferred languages for online subtitles. Arabic is pre-selected;
@@ -100,8 +112,27 @@ internal object IptvSettingsRepository {
         _osdDurationMs.value = IptvSettingsStorage.loadOsdDurationMs() ?: 5000
         _audioLanguage.value = IptvSettingsStorage.loadAudioLanguage() ?: AudioLanguageOption.DEVICE
         _subtitleLanguage.value = IptvSettingsStorage.loadSubtitleLanguage() ?: SubtitleLanguageOption.DEVICE
-        _onlineSubtitleUsername.value = IptvSettingsStorage.loadOnlineSubtitleUsername().orEmpty()
-        _onlineSubtitlePassword.value = IptvSettingsStorage.loadOnlineSubtitlePassword().orEmpty()
+        val storedSources = IptvSettingsStorage.loadOnlineSubtitleSources()
+        val decodedSources = storedSources?.let { raw ->
+            runCatching { Json.decodeFromString<List<OnlineSubtitleSource>>(raw) }.getOrNull()
+        }
+        _onlineSubtitleSources.value = when {
+            !decodedSources.isNullOrEmpty() -> decodedSources
+            else -> {
+                // One-time migration from the earlier single login.
+                val legacyUser = IptvSettingsStorage.loadOnlineSubtitleUsername().orEmpty()
+                val legacyPass = IptvSettingsStorage.loadOnlineSubtitlePassword().orEmpty()
+                if (legacyUser.isNotEmpty() || legacyPass.isNotEmpty()) {
+                    listOf(OnlineSubtitleSource(legacyUser, legacyPass)).also { migrated ->
+                        IptvSettingsStorage.saveOnlineSubtitleSources(
+                            Json.encodeToString(migrated),
+                        )
+                    }
+                } else {
+                    emptyList()
+                }
+            }
+        }
         _onlineSubtitlePreferredLanguages.value =
             IptvSettingsStorage.loadOnlineSubtitlePreferredLanguages()
                 ?.split(",")
@@ -168,18 +199,31 @@ internal object IptvSettingsRepository {
         IptvSettingsStorage.saveSubtitleLanguage(code)
     }
 
-    fun setOnlineSubtitleUsername(username: String) {
+    fun setOnlineSubtitleSources(sources: List<OnlineSubtitleSource>) {
         ensureLoaded()
-        if (_onlineSubtitleUsername.value == username) return
-        _onlineSubtitleUsername.value = username
-        IptvSettingsStorage.saveOnlineSubtitleUsername(username)
+        if (_onlineSubtitleSources.value == sources) return
+        _onlineSubtitleSources.value = sources
+        IptvSettingsStorage.saveOnlineSubtitleSources(Json.encodeToString(sources))
     }
 
-    fun setOnlineSubtitlePassword(password: String) {
-        ensureLoaded()
-        if (_onlineSubtitlePassword.value == password) return
-        _onlineSubtitlePassword.value = password
-        IptvSettingsStorage.saveOnlineSubtitlePassword(password)
+    fun addOnlineSubtitleSource() {
+        setOnlineSubtitleSources(_onlineSubtitleSources.value + OnlineSubtitleSource())
+    }
+
+    fun updateOnlineSubtitleSource(index: Int, username: String, password: String) {
+        val current = _onlineSubtitleSources.value
+        if (index !in current.indices) return
+        setOnlineSubtitleSources(
+            current.toMutableList().also { it[index] = OnlineSubtitleSource(username, password) },
+        )
+    }
+
+    fun removeOnlineSubtitleSource(index: Int) {
+        val current = _onlineSubtitleSources.value
+        if (index !in current.indices) return
+        setOnlineSubtitleSources(
+            current.toMutableList().also { it.removeAt(index) },
+        )
     }
 
     fun setOnlineSubtitlePreferredLanguages(codes: Set<String>) {

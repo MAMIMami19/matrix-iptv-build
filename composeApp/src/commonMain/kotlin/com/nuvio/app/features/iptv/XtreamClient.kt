@@ -2,6 +2,7 @@ package com.nuvio.app.features.iptv
 
 import com.nuvio.app.core.network.createApiHttpClient
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.URLBuilder
 import io.ktor.http.path
@@ -72,7 +73,11 @@ internal object XtreamClient {
         }.buildString()
 
     private suspend fun getText(action: String, vararg params: Pair<String, String>): String =
-        httpClient.get(apiUrl(action, *params)).bodyAsText()
+        httpClient.get(apiUrl(action, *params)) {
+            // A plain browser UA: some panels treat unknown clients
+            // differently, and this can only help reachability.
+            header("User-Agent", "Mozilla/5.0")
+        }.bodyAsText()
 
     suspend fun liveCategories(): List<XtreamCategory> =
         json.decodeFromString(getText("get_live_categories"))

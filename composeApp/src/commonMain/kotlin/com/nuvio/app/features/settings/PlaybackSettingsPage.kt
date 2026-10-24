@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.addons.enabledAddons
+import com.nuvio.app.features.iptv.IptvSettingsSection
 import com.nuvio.app.features.player.AndroidLibmpvVideoOutput
 import com.nuvio.app.features.player.PlaybackBufferSettings
 import com.nuvio.app.features.player.playbackHeapBufferMaxMb
@@ -143,6 +144,11 @@ internal fun LazyListScope.playbackSettingsContent(
             useLibass = useLibass,
             libassRenderType = libassRenderType,
         )
+    }
+    // The copied IPTV parameters live with the normal settings: the IPTV
+    // section closes the Playback page (no separate tab-gear pages anymore).
+    item {
+        IptvSettingsSection()
     }
 }
 
