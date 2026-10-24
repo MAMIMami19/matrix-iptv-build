@@ -28,8 +28,17 @@ def meta(item, mtype):
     }
 
 def catalog(cid, name, mtype, items):
+    from datetime import date as _date
+    today = _date.today().isoformat()
+    kept = []
+    for i in items:
+        d = i.get("release_date") or i.get("first_air_date") or ""
+        if d and d > today:
+            continue  # unreleased hype: rows must be watchable now
+        if i.get("poster_path"):
+            kept.append(i)
     return {"id": cid, "type": mtype, "name": name,
-            "metas": [meta(i, mtype) for i in items if i.get("poster_path")]}
+            "metas": [meta(i, mtype) for i in kept]}
 
 # Network ids (TMDB) — confident: Netflix 213, HBO 49, Apple 2552, Disney 2739, Paramount 4330, STARZ 1077, Prime 1024. VERIFY before first run: Showmax 3903?, OSN 5611?, myCANAL 1511?, Shahid/MBC (search TMDB). Wrong ids simply yield empty results (safe).
 NETWORKS = {"netflix": 213, "apple": 2552, "hbo": 49, "paramount": 4330,
@@ -56,10 +65,17 @@ def main():
     # Reality TV + True Crime (genre ids: reality 10764, crime 80; crime-only filter for true crime)
     d = get("/discover/tv", with_genres="10764", sort_by="popularity.desc")
     add("reality_tv", "Télé-réalité", "series", d["results"][:30])
-    d = get("/discover/tv", with_genres="80", sort_by="popularity.desc")
+    kw = get("/search/keyword", query="true crime")["results"]
+    kw_id = str(kw[0]["id"]) if kw else ""
+    if kw_id:
+        d = get("/discover/tv", with_genres="99", with_keywords=kw_id, sort_by="popularity.desc")
+    else:
+        d = get("/discover/tv", with_genres="99", sort_by="popularity.desc")
     add("true_crime", "True Crime", "series", d["results"][:30])
-    d = get("/movie/now_playing", region="DZ")
-    add("now_showing", "يُعرض الآن", "movie", d["results"][:30])
+    d = get("/movie/now_playing")
+    add("now_showing", "يُعرض الآن", "movie", d["results"][:20])
+    d = get("/tv/on_the_air")
+    add("now_airing", "يُعرض الآن", "series", d["results"][:20])
     # Platform originals (network-filtered)
     for plat, nid in NETWORKS.items():
         for mtype, kind in [("movie", "movie"), ("series", "tv")]:
