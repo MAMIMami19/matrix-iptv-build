@@ -33,7 +33,9 @@ def catalog(cid, name, mtype, items):
 
 # Network ids (TMDB) — confident: Netflix 213, HBO 49, Apple 2552, Disney 2739, Paramount 4330, STARZ 1077, Prime 1024. VERIFY before first run: Showmax 3903?, OSN 5611?, myCANAL 1511?, Shahid/MBC (search TMDB). Wrong ids simply yield empty results (safe).
 NETWORKS = {"netflix": 213, "apple": 2552, "hbo": 49, "paramount": 4330,
-            "disney": 2739, "starz": 1077, "prime": 1024, "showmax": 3903, "osn": 5611, "canal": 1511}
+            "disney": 2739, "starz": 1077, "prime": 1024, "showmax": 3903, "osn": 5611, "canal": 1511,
+            # Disney+ hubs (ride inside the Disney theme): Hulu + National Geographic
+            "hulu": 453, "natgeo": 2058}
 
 def main():
     if not KEY:
