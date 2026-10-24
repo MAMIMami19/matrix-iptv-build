@@ -226,16 +226,16 @@ object ThemeColors {
     )
 
     val Max = ThemeColorPalette(
-        secondary = Color(0xFF5D22BD),
-        secondaryVariant = Color(0xFF9D6BFF),
-        accentGradient = listOf(Color(0xFF2F1D7D), Color(0xFF5D22BD), Color(0xFF9D6BFF)),
-        nativeAccentHex = "#9D6BFF",
+        secondary = Color(0xFF6B3FA0),
+        secondaryVariant = Color(0xFF5822B4),
+        accentGradient = listOf(Color(0xFF5822B4), Color(0xFF6B3FA0), Color(0xFF991EEB)),
+        nativeAccentHex = "#6B3FA0",
         onSecondary = Color.White,
-        focusRing = Color(0xFFC4A8FF),
-        focusBackground = Color(0xFF241447),
-        background = Color(0xFF150A2E),
-        backgroundElevated = Color(0xFF21123F),
-        backgroundCard = Color(0xFF2A1850),
+        focusRing = Color(0xFF991EEB),
+        focusBackground = Color(0xFF1E0F33),
+        background = Color(0xFF000000),
+        backgroundElevated = Color(0xFF141414),
+        backgroundCard = Color(0xFF1F1F1F),
     )
 
     val Shahid = ThemeColorPalette(
@@ -265,16 +265,16 @@ object ThemeColors {
     )
 
     val Disney = ThemeColorPalette(
-        secondary = Color(0xFF1288E8),
-        secondaryVariant = Color(0xFF0CC0DF),
-        accentGradient = listOf(Color(0xFF113CCF), Color(0xFF1288E8), Color(0xFF0CC0DF)),
-        nativeAccentHex = "#0CC0DF",
+        secondary = Color(0xFF113CCF),
+        secondaryVariant = Color(0xFF0063E5),
+        accentGradient = listOf(Color(0xFF113CCF), Color(0xFF0063E5), Color(0xFF0CC0DF)),
+        nativeAccentHex = "#113CCF",
         onSecondary = Color.White,
         focusRing = Color(0xFFFFFFFF),
         focusBackground = Color(0xFF0E2A4A),
-        background = Color(0xFF0C1B33),
-        backgroundElevated = Color(0xFF13263F),
-        backgroundCard = Color(0xFF1B3050),
+        background = Color(0xFF040714),
+        backgroundElevated = Color(0xFF0A0F1E),
+        backgroundCard = Color(0xFF131A2E),
     )
 
     val Starzplay = ThemeColorPalette(
