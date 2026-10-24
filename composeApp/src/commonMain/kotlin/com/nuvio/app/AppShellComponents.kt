@@ -175,6 +175,23 @@ internal fun AppTabHost(
                 )
             }
 
+            AppScreenTab.MyList -> {
+                LibraryScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    scrollToTopRequests = requests.libraryScrollToTopRequests,
+                    onPosterClick = actions.onLibraryPosterClick,
+                    onPosterLongClick = actions.onLibraryPosterLongClick,
+                    onSectionViewAllClick = actions.onLibrarySectionViewAllClick,
+                    onCloudFilePlay = actions.onCloudFilePlay,
+                    onConnectCloudClick = actions.onConnectCloudClick,
+                    onCatalogClick = actions.onCatalogClick,
+                    onPreviewClick = actions.onPosterClick,
+                    onPreviewLongClick = actions.onPosterLongClick,
+                    onDownloadsClick = actions.onDownloadsClick,
+                    disintegrationRequest = state.libraryDisintegrationRequest,
+                )
+            }
+
             AppScreenTab.Settings -> {
                 SettingsScreen(
                     modifier = Modifier.fillMaxSize(),

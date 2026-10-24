@@ -113,6 +113,12 @@ internal fun MainTabsDestination(
                     )
                 },
             ),
+            FloatingNavigationItem(
+                selected = selectedTab == AppScreenTab.MyList,
+                onClick = { onTabSelected(AppScreenTab.MyList) },
+                icon = Icons.Filled.Bookmark,
+                label = "My List",
+            ),
         )
 
         Scaffold(
@@ -153,6 +159,12 @@ internal fun MainTabsDestination(
                                 onAddProfileRequested = onAddProfileRequested,
                             )
                         }
+                        NavItem(
+                            selected = selectedTab == AppScreenTab.MyList,
+                            onClick = { onTabSelected(AppScreenTab.MyList) },
+                            icon = Icons.Filled.Bookmark,
+                            contentDescription = "My List",
+                        )
                     }
                 }
             },
