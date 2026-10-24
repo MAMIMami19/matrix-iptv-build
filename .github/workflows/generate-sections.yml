@@ -5,22 +5,36 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-  pages: write
-  id-token: write
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: TMDB_API_KEY=${{ secrets.TMDB_API_KEY }} python3 virtual-addon/generate.py
-      - uses: actions/upload-pages-artifact@v3
-        with: {path: virtual-addon/out}
-  deploy:
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sections-out
+          path: virtual-addon/out
+  publish:
     needs: build
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
     steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: sections-out
+          path: out
+      - uses: actions/checkout@v4
+        with:
+          repository: MAMIMami19/showmax-sections
+          token: ${{ secrets.SECTIONS_PUSH_TOKEN }}
+          path: pub
+      - run: |
+          cp -r out/. pub/
+          cd pub
+          git config user.name mimi
+          git config user.email build@local
+          git add -A
+          git diff --cached --quiet && echo "no changes" || git commit -m "Sections update"
+          git push
