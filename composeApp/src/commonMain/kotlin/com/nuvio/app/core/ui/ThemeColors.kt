@@ -201,7 +201,7 @@ object ThemeColors {
 
     val Netflix = ThemeColorPalette(
         secondary = Color(0xFFE50914),
-        secondaryVariant = Color(0xFFB00610),
+        secondaryVariant = Color(0xFFB20710),
         accentGradient = listOf(Color(0xFFE50914)),
         nativeAccentHex = "#E50914",
         onSecondary = Color.White,
@@ -239,16 +239,16 @@ object ThemeColors {
     )
 
     val Shahid = ThemeColorPalette(
-        secondary = Color(0xFFF72C5B),
+        secondary = Color(0xFFE10098),
         secondaryVariant = Color(0xFFC72567),
-        accentGradient = listOf(Color(0xFFF72C5B), Color(0xFFE91E63)),
-        nativeAccentHex = "#F72C5B",
+        accentGradient = listOf(Color(0xFFE10098), Color(0xFFC72567)),
+        nativeAccentHex = "#E10098",
         onSecondary = Color.White,
-        focusRing = Color(0xFFF72C5B),
-        focusBackground = Color(0xFF2E1020),
-        background = Color(0xFF101020),
-        backgroundElevated = Color(0xFF1E242F),
-        backgroundCard = Color(0xFF1C1C30),
+        focusRing = Color(0xFFE10098),
+        focusBackground = Color(0xFF2E0A20),
+        background = Color(0xFF000000),
+        backgroundElevated = Color(0xFF141414),
+        backgroundCard = Color(0xFF1F1F1F),
     )
 
     val Paramount = ThemeColorPalette(
