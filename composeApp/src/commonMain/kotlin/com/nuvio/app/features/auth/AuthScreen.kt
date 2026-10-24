@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import coil3.compose.AsyncImage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -639,8 +640,8 @@ private fun AuthBrandLockup(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Image(
-            painter = painterResource(Res.drawable.app_login_promo),
+        AsyncImage(
+            model = "file:///android_asset/promo_banner.jpg",
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
