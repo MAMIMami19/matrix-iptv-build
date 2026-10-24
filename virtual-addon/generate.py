@@ -10,8 +10,9 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
 IMG = "https://image.tmdb.org/t/p/w500"
 
 def get(path, **params):
+    import urllib.parse
     params["api_key"] = KEY
-    qs = "&".join(f"{k}={v}" for k, v in params.items())
+    qs = urllib.parse.urlencode(params)
     with urllib.request.urlopen(f"{API}{path}?{qs}", timeout=30) as r:
         return json.load(r)
 
