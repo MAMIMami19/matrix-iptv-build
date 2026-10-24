@@ -252,15 +252,15 @@ object ThemeColors {
     )
 
     val Paramount = ThemeColorPalette(
-        secondary = Color(0xFF0652DF),
-        secondaryVariant = Color(0xFF0064FF),
-        accentGradient = listOf(Color(0xFF0652DF)),
-        nativeAccentHex = "#0652DF",
+        secondary = Color(0xFF0064FF),
+        secondaryVariant = Color(0xFF0652DF),
+        accentGradient = listOf(Color(0xFF0064FF), Color(0xFF0652DF)),
+        nativeAccentHex = "#0064FF",
         onSecondary = Color.White,
         focusRing = Color(0xFF4D9FFF),
         focusBackground = Color(0xFF0A1E42),
-        background = Color(0xFF101010),
-        backgroundElevated = Color(0xFF161616),
+        background = Color(0xFF000000),
+        backgroundElevated = Color(0xFF141414),
         backgroundCard = Color(0xFF1F1F1F),
     )
 
@@ -292,7 +292,7 @@ object ThemeColors {
 
     val Prime = ThemeColorPalette(
         secondary = Color(0xFF00A8E1),
-        secondaryVariant = Color(0xFF0073A8),
+        secondaryVariant = Color(0xFF005FB8),
         accentGradient = listOf(Color(0xFF00A8E1)),
         nativeAccentHex = "#00A8E1",
         onSecondary = Color.White,
