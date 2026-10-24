@@ -280,13 +280,6 @@ internal fun LazyListScope.settingsRootContent(
                 )
             }
             Text(
-                text = stringResource(Res.string.compose_about_made_with),
-                modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Text(
                 text = stringResource(
                     Res.string.compose_about_version_format,
                     AppVersionConfig.VERSION_NAME,

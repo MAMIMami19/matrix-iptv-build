@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -57,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
@@ -94,6 +96,7 @@ import kotlin.math.PI
 import kotlin.math.sin
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
+import org.jetbrains.compose.resources.painterResource
 import nuvio.composeapp.generated.resources.compose_auth_already_have_account
 import nuvio.composeapp.generated.resources.compose_auth_continue_without_account
 import nuvio.composeapp.generated.resources.compose_auth_create_account
@@ -636,9 +639,25 @@ private fun AuthBrandLockup(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Image(
+            painter = painterResource(Res.drawable.login_promo_banner),
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .clip(RoundedCornerShape(16.dp)),
+            contentScale = ContentScale.Crop,
+        )
+        Spacer(modifier = Modifier.height(16.dp))
         AppBrandWordmark(
             contentDescription = null,
             modifier = Modifier.height(logoHeight),
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = "by Madjour",
+            style = MaterialTheme.typography.labelSmall,
+            color = AuthTextSecondary,
         )
         Spacer(modifier = Modifier.height(14.dp))
         Text(
