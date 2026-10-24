@@ -198,6 +198,7 @@ internal fun AppTabHost(
             AppScreenTab.Iptv -> {
                 VodScreen(
                     modifier = Modifier.fillMaxSize(),
+                    isSelectedTab = selectedTab == AppScreenTab.Iptv,
                     onPlay = { title, streamId, url, contentType ->
                         actions.onXtreamPlay?.invoke(title, streamId, url, contentType)
                     },
@@ -207,6 +208,7 @@ internal fun AppTabHost(
             AppScreenTab.LiveTv -> {
                 LiveTvScreen(
                     modifier = Modifier.fillMaxSize(),
+                    isSelectedTab = selectedTab == AppScreenTab.LiveTv,
                     onPlay = { title, streamId, url, contentType ->
                         actions.onXtreamPlay?.invoke(title, streamId, url, contentType)
                     },

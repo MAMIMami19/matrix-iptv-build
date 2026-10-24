@@ -12,7 +12,7 @@ internal val PlayerScreenRuntime.contentLanguage: String?
 
 internal val PlayerScreenRuntime.preferredAudioLanguageTargets: List<String>
     get() = resolvePreferredAudioLanguageTargets(
-        preferredAudioLanguage = playerSettingsUiState.preferredAudioLanguage,
+        preferredAudioLanguage = effectivePreferredAudioLanguage,
         secondaryPreferredAudioLanguage = playerSettingsUiState.secondaryPreferredAudioLanguage,
         deviceLanguages = DeviceLanguagePreferences.preferredLanguageCodes(),
         contentOriginalLanguage = contentLanguage,

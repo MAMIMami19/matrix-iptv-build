@@ -190,7 +190,7 @@ private fun PlayerScreenRuntime.tryAutoSelectPreferredSubtitleFromAvailableTrack
     if (isUserExplicitSubtitleSelection) return
 
     val preferredSubtitleLanguage = normalizeLanguageCode(
-        playerSettingsUiState.preferredSubtitleLanguage,
+        effectivePreferredSubtitleLanguage,
     )
     val preferredSubtitleTargets = if (
         preferredSubtitleLanguage == SubtitleLanguageOption.NONE ||
@@ -199,8 +199,8 @@ private fun PlayerScreenRuntime.tryAutoSelectPreferredSubtitleFromAvailableTrack
         emptyList()
     } else {
         resolvePreferredSubtitleLanguageTargets(
-            preferredSubtitleLanguage = playerSettingsUiState.preferredSubtitleLanguage,
-            secondaryPreferredSubtitleLanguage = playerSettingsUiState.secondaryPreferredSubtitleLanguage,
+            preferredSubtitleLanguage = effectivePreferredSubtitleLanguage,
+            secondaryPreferredSubtitleLanguage = effectiveSecondaryPreferredSubtitleLanguage,
             deviceLanguages = DeviceLanguagePreferences.preferredLanguageCodes(),
         )
     }

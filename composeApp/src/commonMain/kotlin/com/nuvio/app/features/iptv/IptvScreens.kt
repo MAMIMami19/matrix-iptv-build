@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +31,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.nuvio.app.features.profiles.PinEntryDialog
+import com.nuvio.app.features.profiles.PinVerifyResult
+import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import kotlinx.coroutines.launch
 
 /** Play callback: title, stream id, resolved stream URL, content type ("tv", "movie", "series"). */
@@ -95,8 +99,63 @@ private fun IptvSearchField(query: String, onQueryChange: (String) -> Unit) {
 @Composable
 internal fun LiveTvScreen(
     modifier: Modifier = Modifier,
+    isSelectedTab: Boolean = true,
     onPlay: XtreamPlayHandler,
 ) {
+    IptvSettingsRepository.ensureLoaded()
+    val pin by IptvSettingsRepository.pin.collectAsState()
+    val sessionUnlocked by IptvSettingsRepository.sessionUnlocked.collectAsState()
+    val lockAdult by IptvSettingsRepository.lockAdultCategories.collectAsState()
+    val clearOnClose by IptvSettingsRepository.clearHistoryOnClose.collectAsState()
+    val lockSettings by IptvSettingsRepository.lockSettings.collectAsState()
+    val needsPin = pin.isNotEmpty() && !sessionUnlocked
+    val adultHidden = lockAdult && !sessionUnlocked
+    var showSettings by remember { mutableStateOf(false) }
+    var showSettingsPin by remember { mutableStateOf(false) }
+    var wasSelected by remember { mutableStateOf(isSelectedTab) }
+
+    // Clear-on-close: when the tab loses selection, wipe this session's IPTV
+    // watch progress if the setting is on.
+    LaunchedEffect(isSelectedTab, clearOnClose) {
+        if (wasSelected && !isSelectedTab && clearOnClose) {
+            IptvSettingsRepository.takePlayedIptvKeys().forEach { (videoId, parentMetaId) ->
+                WatchProgressRepository.clearProgress(videoId, parentMetaId)
+            }
+        }
+        wasSelected = isSelectedTab
+    }
+
+    if (showSettingsPin) {
+        PinEntryDialog(
+            profileName = "IPTV",
+            onVerify = { entered -> PinVerifyResult(unlocked = entered == pin) },
+            onDismiss = { showSettingsPin = false },
+            onVerified = {
+                IptvSettingsRepository.setSessionUnlocked(true)
+                showSettingsPin = false
+                showSettings = true
+            },
+        )
+    }
+    if (showSettings) {
+        IptvSettingsScreen(onBack = { showSettings = false })
+        return
+    }
+    if (needsPin) {
+        Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
+            Text("Live TV", style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(32.dp))
+            Text("Locked")
+        }
+        PinEntryDialog(
+            profileName = "IPTV",
+            onVerify = { entered -> PinVerifyResult(unlocked = entered == pin) },
+            onDismiss = {},
+            onVerified = { IptvSettingsRepository.setSessionUnlocked(true) },
+        )
+        return
+    }
+
     var categories by remember { mutableStateOf<List<XtreamCategory>?>(null) }
     var selected by remember { mutableStateOf<XtreamCategory?>(null) }
     var channels by remember { mutableStateOf<List<XtreamLiveStream>?>(null) }
@@ -134,7 +193,22 @@ internal fun LiveTvScreen(
     LaunchedEffect(Unit) { loadCategories() }
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
-        Text("Live TV", style = MaterialTheme.typography.titleLarge)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "Live TV",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(
+                onClick = {
+                    if (lockSettings && pin.isNotEmpty() && !sessionUnlocked) {
+                        showSettingsPin = true
+                    } else {
+                        showSettings = true
+                    }
+                },
+            ) { Text("Settings") }
+        }
         Spacer(modifier = Modifier.height(12.dp))
         when {
             loading -> IptvLoading()
@@ -144,6 +218,7 @@ internal fun LiveTvScreen(
             })
             selected == null -> {
                 val list = categories.orEmpty()
+                    .filterNot { adultHidden && IptvSettingsRepository.isAdultCategory(it.categoryName) }
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(list, key = { it.categoryId }) { category ->
                         IptvRow(iconUrl = null, name = category.categoryName) {
@@ -167,6 +242,10 @@ internal fun LiveTvScreen(
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(shown, key = { it.streamId }) { channel ->
                         IptvRow(iconUrl = channel.streamIcon, name = channel.name) {
+                            IptvSettingsRepository.addPlayedIptvKey(
+                                "iptv:${channel.streamId}",
+                                "iptv:${channel.streamId}",
+                            )
                             onPlay(
                                 channel.name,
                                 channel.streamId,
@@ -186,8 +265,61 @@ private enum class VodType { Movies, Series }
 @Composable
 internal fun VodScreen(
     modifier: Modifier = Modifier,
+    isSelectedTab: Boolean = true,
     onPlay: XtreamPlayHandler,
 ) {
+    IptvSettingsRepository.ensureLoaded()
+    val pin by IptvSettingsRepository.pin.collectAsState()
+    val sessionUnlocked by IptvSettingsRepository.sessionUnlocked.collectAsState()
+    val lockAdult by IptvSettingsRepository.lockAdultCategories.collectAsState()
+    val clearOnClose by IptvSettingsRepository.clearHistoryOnClose.collectAsState()
+    val lockSettings by IptvSettingsRepository.lockSettings.collectAsState()
+    val needsPin = pin.isNotEmpty() && !sessionUnlocked
+    val adultHidden = lockAdult && !sessionUnlocked
+    var showSettings by remember { mutableStateOf(false) }
+    var showSettingsPin by remember { mutableStateOf(false) }
+    var wasSelected by remember { mutableStateOf(isSelectedTab) }
+
+    LaunchedEffect(isSelectedTab, clearOnClose) {
+        if (wasSelected && !isSelectedTab && clearOnClose) {
+            IptvSettingsRepository.takePlayedIptvKeys().forEach { (videoId, parentMetaId) ->
+                WatchProgressRepository.clearProgress(videoId, parentMetaId)
+            }
+        }
+        wasSelected = isSelectedTab
+    }
+
+    if (showSettingsPin) {
+        PinEntryDialog(
+            profileName = "IPTV",
+            onVerify = { entered -> PinVerifyResult(unlocked = entered == pin) },
+            onDismiss = { showSettingsPin = false },
+            onVerified = {
+                IptvSettingsRepository.setSessionUnlocked(true)
+                showSettingsPin = false
+                showSettings = true
+            },
+        )
+    }
+    if (showSettings) {
+        IptvSettingsScreen(onBack = { showSettings = false })
+        return
+    }
+    if (needsPin) {
+        Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
+            Text("IPTV", style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(32.dp))
+            Text("Locked")
+        }
+        PinEntryDialog(
+            profileName = "IPTV",
+            onVerify = { entered -> PinVerifyResult(unlocked = entered == pin) },
+            onDismiss = {},
+            onVerified = { IptvSettingsRepository.setSessionUnlocked(true) },
+        )
+        return
+    }
+
     var vodType by remember { mutableStateOf(VodType.Movies) }
     var vodCats by remember { mutableStateOf<List<XtreamCategory>?>(null) }
     var seriesCats by remember { mutableStateOf<List<XtreamCategory>?>(null) }
@@ -259,7 +391,22 @@ internal fun VodScreen(
     LaunchedEffect(Unit) { loadCategories() }
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
-        Text("IPTV", style = MaterialTheme.typography.titleLarge)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "IPTV",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(
+                onClick = {
+                    if (lockSettings && pin.isNotEmpty() && !sessionUnlocked) {
+                        showSettingsPin = true
+                    } else {
+                        showSettings = true
+                    }
+                },
+            ) { Text("Settings") }
+        }
         Spacer(modifier = Modifier.height(12.dp))
         Row {
             TextButton(
@@ -309,6 +456,10 @@ internal fun VodScreen(
                             val episodeTitle = episode.title?.takeIf { it.isNotBlank() }
                                 ?: "Episode ${episode.episodeNum ?: ""}"
                             IptvRow(iconUrl = null, name = episodeTitle) {
+                                IptvSettingsRepository.addPlayedIptvKey(
+                                    "iptv:${episode.id}",
+                                    "iptv:${episode.id}",
+                                )
                                 onPlay(
                                     "${series.name} - $episodeTitle",
                                     episode.id,
@@ -335,6 +486,10 @@ internal fun VodScreen(
                     LazyColumn(modifier = Modifier.weight(1f)) {
                         items(shown, key = { it.streamId }) { movie ->
                             IptvRow(iconUrl = movie.streamIcon, name = movie.name) {
+                                IptvSettingsRepository.addPlayedIptvKey(
+                                    "iptv:${movie.streamId}",
+                                    "iptv:${movie.streamId}",
+                                )
                                 onPlay(
                                     movie.name,
                                     movie.streamId,
@@ -367,7 +522,7 @@ internal fun VodScreen(
                     vodCats.orEmpty()
                 } else {
                     seriesCats.orEmpty()
-                }
+                }.filterNot { adultHidden && IptvSettingsRepository.isAdultCategory(it.categoryName) }
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(list, key = { it.categoryId }) { category ->
                         IptvRow(iconUrl = null, name = category.categoryName) {

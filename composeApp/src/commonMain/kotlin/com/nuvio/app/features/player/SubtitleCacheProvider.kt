@@ -18,4 +18,10 @@ expect object SubtitleCacheProvider {
      * On platforms where caching is not needed, returns the input list unchanged.
      */
     suspend fun cacheForExternalPlayer(subtitles: List<SubtitleInput>): List<SubtitleInput>?
+
+    /**
+     * Removes all cached subtitle files. No-op on platforms without a local
+     * subtitle cache.
+     */
+    fun clearSubtitleCache()
 }

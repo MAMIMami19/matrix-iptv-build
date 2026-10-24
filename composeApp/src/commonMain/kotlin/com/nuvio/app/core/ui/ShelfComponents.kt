@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,12 +35,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.StrokeJoin
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.home_view_all
@@ -133,6 +140,12 @@ fun NuvioPosterCard(
     isWatched: Boolean = false,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
+    /**
+     * 1-based rank for the trending rows: when set, a big outlined numeral is
+     * rendered to the left of the poster, bottom-aligned and slightly overlapped
+     * by it, matching the reference Top-10 design. Null = regular poster card.
+     */
+    rankNumber: Int? = null,
 ) {
     val posterCardStyle = rememberPosterCardStyleUiState()
     val tokens = MaterialTheme.nuvio
@@ -144,13 +157,10 @@ fun NuvioPosterCard(
     )
     val shouldShowTitleBelow = showTitleBelow && !posterCardStyle.hideLabelsEnabled
 
-    Column(
-        modifier = modifier.width(cardWidth),
-        verticalArrangement = Arrangement.spacedBy(NuvioTokens.Space.s6),
-    ) {
+    @Composable
+    fun PosterBox(baseModifier: Modifier) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
+            modifier = baseModifier
                 .aspectRatio(shape.aspectRatio)
                 .clip(cardShape)
                 .background(tokens.colors.surface)
@@ -245,6 +255,20 @@ fun NuvioPosterCard(
 
             NuvioPosterWatchedOverlay(isWatched = isWatched)
         }
+    }
+
+    Column(
+        modifier = if (rankNumber != null) modifier else modifier.width(cardWidth),
+        verticalArrangement = Arrangement.spacedBy(NuvioTokens.Space.s6),
+    ) {
+        if (rankNumber != null) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                RankNumber(rank = rankNumber)
+                PosterBox(Modifier.width(cardWidth).offset(x = (-10).dp))
+            }
+        } else {
+            PosterBox(Modifier.fillMaxWidth())
+        }
         if (shouldShowTitleBelow) {
             Text(
                 text = title,
@@ -267,6 +291,28 @@ fun NuvioPosterCard(
         } else {
             Box(modifier = Modifier.height(NuvioTokens.Space.none))
         }
+    }
+}
+
+/**
+ * Big outlined rank numeral for the trending rows: dark fill with a white
+ * outline, rendered to the left of the poster and bottom-aligned with it.
+ */
+@Composable
+private fun RankNumber(rank: Int) {
+    val strokeWidth = with(LocalDensity.current) { 2.dp.toPx() }
+    val style = TextStyle(
+        fontSize = 96.sp,
+        lineHeight = 96.sp,
+        fontWeight = FontWeight.Black,
+    )
+    Box {
+        Text(text = rank.toString(), style = style, color = Color.Black)
+        Text(
+            text = rank.toString(),
+            style = style.copy(drawStyle = Stroke(width = strokeWidth, join = StrokeJoin.Round)),
+            color = Color.White,
+        )
     }
 }
 

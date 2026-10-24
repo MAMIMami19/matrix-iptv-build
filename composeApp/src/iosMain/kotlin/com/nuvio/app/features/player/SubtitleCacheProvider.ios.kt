@@ -9,4 +9,8 @@ actual object SubtitleCacheProvider {
     actual suspend fun cacheForExternalPlayer(subtitles: List<SubtitleInput>): List<SubtitleInput>? {
         return subtitles.ifEmpty { null }
     }
+
+    actual fun clearSubtitleCache() {
+        // iOS does not cache subtitle files locally; nothing to clear.
+    }
 }

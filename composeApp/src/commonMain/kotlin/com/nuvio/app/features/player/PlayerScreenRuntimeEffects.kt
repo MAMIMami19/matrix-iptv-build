@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.nuvio.app.features.details.MetaDetailsRepository
+import com.nuvio.app.features.iptv.IptvSettingsRepository
 import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.features.p2p.P2pStreamRequest
 import com.nuvio.app.features.p2p.P2pStreamingEngine
@@ -207,8 +208,8 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
     }
 
     val subtitlePreferenceKey = listOf(
-        playerSettingsUiState.preferredSubtitleLanguage,
-        playerSettingsUiState.secondaryPreferredSubtitleLanguage.orEmpty(),
+        effectivePreferredSubtitleLanguage,
+        effectiveSecondaryPreferredSubtitleLanguage.orEmpty(),
         subtitleStyle.useForcedSubtitles,
     ).joinToString("|")
     var lastSubtitlePreferenceKey by remember { mutableStateOf<String?>(null) }
@@ -227,8 +228,8 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
         lastSubtitlePreferenceKey = subtitlePreferenceKey
 
         controller.applySubtitlePreferences(
-            preferredLanguage = playerSettingsUiState.preferredSubtitleLanguage,
-            secondaryPreferredLanguage = playerSettingsUiState.secondaryPreferredSubtitleLanguage,
+            preferredLanguage = effectivePreferredSubtitleLanguage,
+            secondaryPreferredLanguage = effectiveSecondaryPreferredSubtitleLanguage,
             useForcedSubtitles = subtitleStyle.useForcedSubtitles,
             autoSelectionApplied = preferredSubtitleSelectionApplied,
             hasActiveSubtitle = selectedSubtitleIndex >= 0 || selectedAddonSubtitleId != null,
@@ -405,7 +406,9 @@ private fun PlayerScreenRuntime.BindPlayerUiVisibilityEffects() {
         ) {
             return@LaunchedEffect
         }
-        delay(3500)
+        // IPTV launches use the IPTV OSD duration setting (default 5s);
+        // everything else keeps the built-in 3.5s hide timer.
+        delay(if (isIptvLaunch) IptvSettingsRepository.osdDurationMsValue.toLong() else 3500)
         controlsVisible = false
     }
 

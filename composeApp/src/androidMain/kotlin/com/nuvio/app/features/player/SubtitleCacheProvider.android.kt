@@ -8,4 +8,8 @@ actual object SubtitleCacheProvider {
     actual suspend fun cacheForExternalPlayer(subtitles: List<SubtitleInput>): List<SubtitleInput>? {
         return SubtitleFileCache.cacheSubtitles(subtitles)
     }
+
+    actual fun clearSubtitleCache() {
+        SubtitleFileCache.clearCache()
+    }
 }

@@ -1409,6 +1409,9 @@ internal fun MainAppContent(
                                         sourceUrl = url,
                                         streamTitle = title,
                                         providerName = "NOVA",
+                                        // videoId makes IPTV watch progress recordable so the
+                                        // "clear watch history on close" setting can wipe it.
+                                        videoId = "iptv:$streamId",
                                         parentMetaId = "iptv:$streamId",
                                         parentMetaType = contentType,
                                     )

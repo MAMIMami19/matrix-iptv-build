@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.details.MetaDetailsRepository
+import com.nuvio.app.features.iptv.IptvSettingsRepository
 import com.nuvio.app.features.details.MetaScreenSettingsRepository
 import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.features.p2p.P2pStreamingEngine
@@ -144,13 +145,19 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
             (runtime.playbackSnapshot.isPlaying ||
                 (runtime.shouldPlay && runtime.playbackSnapshot.isLoading))
         EnterImmersivePlayerMode(keepScreenAwake = keepScreenAwake)
-        ManagePlayerPictureInPicture(
-            isPlaying = runtime.playbackSnapshot.isPlaying,
-            videoSize = IntSize(
-                runtime.playbackSnapshot.videoWidth,
-                runtime.playbackSnapshot.videoHeight,
-            ),
-        )
+        // System PiP for IPTV launches is gated by the IPTV system-PiP setting
+        // (default OFF); all other playback keeps the existing behavior.
+        val isIptvLaunch = args.parentMetaId.startsWith("iptv:")
+        val iptvSystemPipEnabled by IptvSettingsRepository.systemPipEnabled.collectAsStateWithLifecycle()
+        if (!isIptvLaunch || iptvSystemPipEnabled) {
+            ManagePlayerPictureInPicture(
+                isPlaying = runtime.playbackSnapshot.isPlaying,
+                videoSize = IntSize(
+                    runtime.playbackSnapshot.videoWidth,
+                    runtime.playbackSnapshot.videoHeight,
+                ),
+            )
+        }
         runtime.BindPlayerRuntimeEffects()
         runtime.RenderPlayerRuntimeUi()
     }
