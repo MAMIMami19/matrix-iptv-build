@@ -278,13 +278,13 @@ object ThemeColors {
     )
 
     val Starzplay = ThemeColorPalette(
-        secondary = Color(0xFF17B8C9),
-        secondaryVariant = Color(0xFF78F6F6),
-        accentGradient = listOf(Color(0xFF17B8C9), Color(0xFF78F6F6)),
-        nativeAccentHex = "#17B8C9",
-        onSecondary = Color(0xFF062A30),
-        focusRing = Color(0xFF78F6F6),
-        focusBackground = Color(0xFF07303A),
+        secondary = Color(0xFFFA7000),
+        secondaryVariant = Color(0xFFFF6600),
+        accentGradient = listOf(Color(0xFFFA7000), Color(0xFFFF6600)),
+        nativeAccentHex = "#FA7000",
+        onSecondary = Color.White,
+        focusRing = Color(0xFFFA7000),
+        focusBackground = Color(0xFF2A1A0A),
         background = Color(0xFF000000),
         backgroundElevated = Color(0xFF121212),
         backgroundCard = Color(0xFF1A1A1A),
