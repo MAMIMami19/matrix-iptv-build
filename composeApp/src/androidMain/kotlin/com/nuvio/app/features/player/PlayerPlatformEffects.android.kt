@@ -69,13 +69,12 @@ actual fun rememberPlayerOrientationController(): PlayerOrientationController? {
             override fun toggle() {
                 val isLandscape = activity.resources.configuration.orientation ==
                     android.content.res.Configuration.ORIENTATION_LANDSCAPE
-                PlayerOrientationState.setMode(
+                PlayerOrientationState.mode =
                     if (isLandscape) {
                         PlayerOrientationMode.Portrait
                     } else {
                         PlayerOrientationMode.Landscape
-                    },
-                )
+                    }
             }
         }
     }

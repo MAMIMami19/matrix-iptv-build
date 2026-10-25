@@ -36,12 +36,9 @@ enum class PlayerOrientationMode {
 }
 
 object PlayerOrientationState {
+    // Public setter on purpose: the Android controller assigns it directly
+    // (a separate setMode() function would clash with the generated setter).
     var mode by mutableStateOf(PlayerOrientationMode.Sensor)
-        private set
-
-    fun setMode(newMode: PlayerOrientationMode) {
-        mode = newMode
-    }
 
     fun reset() {
         mode = PlayerOrientationMode.Sensor
