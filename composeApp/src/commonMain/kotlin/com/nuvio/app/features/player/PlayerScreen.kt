@@ -47,6 +47,9 @@ fun PlayerScreen(
     sourceFilename: String? = null,
     stream: com.nuvio.app.features.streams.StreamItem? = null,
     iptvPlaylist: List<com.nuvio.app.features.iptv.IptvPlayerListItem> = emptyList(),
+    minimized: Boolean = false,
+    onExpandMiniPlayer: (() -> Unit)? = null,
+    onCloseMiniPlayer: (() -> Unit)? = null,
 ) {
     PlayerScreenContent(
         PlayerScreenArgs(
@@ -91,6 +94,9 @@ fun PlayerScreen(
             onOpenPartyMedia = onOpenPartyMedia,
             stream = stream,
             iptvPlaylist = iptvPlaylist,
+            minimized = minimized,
+            onExpandMiniPlayer = onExpandMiniPlayer,
+            onCloseMiniPlayer = onCloseMiniPlayer,
         )
     )
 }

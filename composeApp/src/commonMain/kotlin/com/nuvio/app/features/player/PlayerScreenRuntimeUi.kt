@@ -18,7 +18,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -51,8 +58,16 @@ import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
+/** Mini-player video size (YouTube-style bottom bar). */
+private val MiniPlayerVideoWidth = 110.dp
+private val MiniPlayerVideoHeight = 62.dp
+
 @Composable
-internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
+internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi(
+    minimized: Boolean = false,
+    onExpandMiniPlayer: (() -> Unit)? = null,
+    onCloseMiniPlayer: (() -> Unit)? = null,
+) {
     val runtime = this
     val isInPip = rememberIsInPictureInPicture()
     val displayedPositionMs = scrubbingPositionMs ?: playbackSnapshot.positionMs
@@ -143,10 +158,15 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
 
     BindAutoSyncRuntimeEffects() // AutoSync hook
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .onSizeChanged { layoutSize = it }
+    // In minimized mode the surface tap/drag gestures must not swallow
+    // taps meant for the tabs below or the mini bar itself. Modifier
+    // values do not affect composition slots, so gating them here keeps
+    // the video surface (and its native player) alive across
+    // minimize/expand.
+    val playerSurfaceGestures = if (minimized) {
+        Modifier
+    } else {
+        Modifier
             .playerSurfaceTapGestures(
                 layoutSize = layoutSize,
                 playbackGesturesEnabled = playbackGesturesEnabled,
@@ -174,7 +194,13 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
                 clearLiveGestureFeedbackState = gestureCallbacks.clearLiveGestureFeedback,
                 revealLockedOverlayState = gestureCallbacks.revealLockedOverlay,
                 commitHorizontalSeekState = gestureCallbacks.commitHorizontalSeek,
-            ),
+            )
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { layoutSize = it }
+            .then(playerSurfaceGestures),
     ) {
         val playerSurfaceSourceUrl = if (isP2pPlaybackActive) p2pResolvedSourceUrl else activeSourceUrl
         val playbackKey = activePlaybackKey
@@ -192,7 +218,17 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
                     sourceResponseHeaders = activeSourceResponseHeaders,
                     externalSubtitles = externalSubtitles,
                     streamType = activeStreamType,
-                    modifier = Modifier.fillMaxSize(),
+                    // SAME call site in both modes: only the size
+                    // modifier changes, so minimizing/expanding never
+                    // disposes the native player or restarts playback.
+                    modifier = if (minimized) {
+                        Modifier
+                            .size(MiniPlayerVideoWidth, MiniPlayerVideoHeight)
+                            .align(Alignment.CenterStart)
+                            .padding(start = 8.dp)
+                    } else {
+                        Modifier.fillMaxSize()
+                    },
                     playWhenReady = shouldPlay,
                     initialPositionMs = activeInitialPositionMs.takeIf { it > 0L },
                     initialPositionRequestKey = initialPositionRequestKey,
@@ -234,39 +270,140 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
             }
         }
 
-        AnimatedVisibility(
-            visible = playerSettingsUiState.pauseOverlayEnabled && pausedOverlayVisible && !controlsVisible && !playerControlsLocked,
-            enter = fadeIn(animationSpec = tween(durationMillis = 220)),
-            exit = fadeOut(animationSpec = tween(durationMillis = 180)),
-        ) {
-            PauseMetadataOverlay(
-                title = title,
-                logo = logo,
-                isEpisode = isEpisode,
-                seasonNumber = activeSeasonNumber,
-                episodeNumber = activeEpisodeNumber,
-                episodeTitle = activeEpisodeTitle,
-                pauseDescription = activePauseDescription ?: activeStreamSubtitle,
-                providerName = activeProviderName,
-                metrics = metrics,
-                horizontalSafePadding = horizontalSafePadding,
-                modifier = Modifier.fillMaxSize(),
+        if (!minimized) {
+            AnimatedVisibility(
+                visible = playerSettingsUiState.pauseOverlayEnabled && pausedOverlayVisible && !controlsVisible && !playerControlsLocked,
+                enter = fadeIn(animationSpec = tween(durationMillis = 220)),
+                exit = fadeOut(animationSpec = tween(durationMillis = 180)),
+            ) {
+                PauseMetadataOverlay(
+                    title = title,
+                    logo = logo,
+                    isEpisode = isEpisode,
+                    seasonNumber = activeSeasonNumber,
+                    episodeNumber = activeEpisodeNumber,
+                    episodeTitle = activeEpisodeTitle,
+                    pauseDescription = activePauseDescription ?: activeStreamSubtitle,
+                    providerName = activeProviderName,
+                    metrics = metrics,
+                    horizontalSafePadding = horizontalSafePadding,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            RenderPlayerControls(displayedPositionMs = displayedPositionMs, isEpisode = isEpisode)
+            RenderPlaybackOverlays(
+                runtime = runtime,
+                displayedPositionMs = displayedPositionMs,
+                currentGestureFeedback = currentGestureFeedback,
+                p2pInitialLoadingMessage = p2pInitialLoadingMessage,
+                p2pInitialLoadingProgress = p2pInitialLoadingProgress,
+                showP2pRebufferStats = showP2pRebufferStats,
+                p2pRebufferMessage = p2pRebufferMessage,
+                p2pRebufferProgress = p2pRebufferProgress,
+            )
+            RenderPlayerModals(displayedPositionMs = displayedPositionMs)
+            RenderParty(runtime = runtime)
+        } else {
+            RenderMiniPlayerBar(
+                onExpand = onExpandMiniPlayer,
+                onClose = onCloseMiniPlayer,
             )
         }
+    }
+}
 
-        RenderPlayerControls(displayedPositionMs = displayedPositionMs, isEpisode = isEpisode)
-        RenderPlaybackOverlays(
-            runtime = runtime,
-            displayedPositionMs = displayedPositionMs,
-            currentGestureFeedback = currentGestureFeedback,
-            p2pInitialLoadingMessage = p2pInitialLoadingMessage,
-            p2pInitialLoadingProgress = p2pInitialLoadingProgress,
-            showP2pRebufferStats = showP2pRebufferStats,
-            p2pRebufferMessage = p2pRebufferMessage,
-            p2pRebufferProgress = p2pRebufferProgress,
-        )
-        RenderPlayerModals(displayedPositionMs = displayedPositionMs)
-        RenderParty(runtime = runtime)
+/**
+ * YouTube-style bottom mini bar, rendered ONLY in minimized mode, in the
+ * same outer Box as the video surface. The surface itself sits at the
+ * start of the bar (same composition slot as full mode); this row lays
+ * out beside it and never overlaps the video area.
+ */
+@Composable
+private fun PlayerScreenRuntime.RenderMiniPlayerBar(
+    onExpand: (() -> Unit)?,
+    onClose: (() -> Unit)?,
+) {
+    // The whole bar is tappable -> expand (inner buttons win the tap
+    // over this parent clickable, so play/pause/close keep working).
+    // This Box is drawn after (on top of) the video surface, which stays
+    // visible through it: only the row beside the video is opaque.
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(enabled = onExpand != null) { onExpand?.invoke() },
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = MiniPlayerVideoWidth + 16.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = iptvActiveTitle ?: title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = activeStreamTitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.LightGray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            IconButton(onClick = { togglePlayback() }) {
+                Icon(
+                    imageVector = if (playbackSnapshot.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (playbackSnapshot.isPlaying) "Pause" else "Play",
+                    tint = Color.White,
+                )
+            }
+            IconButton(
+                onClick = { onExpand?.invoke() },
+                enabled = onExpand != null,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.KeyboardArrowUp,
+                    contentDescription = "Expand",
+                    tint = Color.White,
+                )
+            }
+            IconButton(
+                onClick = { onClose?.invoke() },
+                enabled = onClose != null,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Close",
+                    tint = Color.White,
+                )
+            }
+        }
+        // Thin progress line along the bottom of the bar.
+        val durationMs = playbackSnapshot.durationMs
+        val progressFraction = if (durationMs > 0L) {
+            (playbackSnapshot.positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(2.dp)
+                .background(Color.DarkGray),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(progressFraction)
+                    .height(2.dp)
+                    .background(Color.Red),
+            )
+        }
     }
 }
 

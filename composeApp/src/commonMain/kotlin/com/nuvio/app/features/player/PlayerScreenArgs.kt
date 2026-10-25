@@ -45,4 +45,16 @@ internal data class PlayerScreenArgs(
     val onOpenPartyMedia: (PartyMedia) -> Unit = {},
     val stream: com.nuvio.app.features.streams.StreamItem? = null,
     val iptvPlaylist: List<com.nuvio.app.features.iptv.IptvPlayerListItem> = emptyList(),
+    /**
+     * Mini-player mode (YouTube-style): the player is hosted at the app
+     * root above the tabs instead of as a full-screen destination. When
+     * true, only the video surface plus a compact mini bar render; all
+     * overlays, controls, modals and gestures are skipped. The surface
+     * itself stays in the same composition slot as in full mode (only its
+     * size modifier changes), so minimizing/expanding never restarts
+     * playback. Null callbacks mean "no mini-player host" (classic route).
+     */
+    val minimized: Boolean = false,
+    val onExpandMiniPlayer: (() -> Unit)? = null,
+    val onCloseMiniPlayer: (() -> Unit)? = null,
 )

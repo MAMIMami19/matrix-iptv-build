@@ -2,7 +2,6 @@ package com.nuvio.app.features.player
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -74,9 +73,13 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
     val runtime = remember { PlayerScreenRuntime(args) }
     runtime.args = args
 
+    // NOTE: no forced fillMaxSize here on purpose — the mini-player host
+    // passes a small bottom-bar modifier when minimized, and the player
+    // surface must keep its composition slot across minimize/expand, so
+    // size is driven entirely by the caller's modifier. The classic
+    // PlayerRoute path passes fillMaxSize, so it is unaffected.
     BoxWithConstraints(
         modifier = args.modifier
-            .fillMaxSize()
             .background(Color.Black),
     ) {
         val density = LocalDensity.current
@@ -144,12 +147,16 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
         val keepScreenAwake = runtime.errorMessage == null &&
             (runtime.playbackSnapshot.isPlaying ||
                 (runtime.shouldPlay && runtime.playbackSnapshot.isLoading))
-        EnterImmersivePlayerMode(keepScreenAwake = keepScreenAwake)
+        // Minimized (mini-player) mode never takes immersive mode or
+        // system PiP: the in-app mini bar owns the session while browsing.
+        if (!args.minimized) {
+            EnterImmersivePlayerMode(keepScreenAwake = keepScreenAwake)
+        }
         // System PiP for IPTV launches is gated by the IPTV system-PiP setting
         // (default OFF); all other playback keeps the existing behavior.
         val isIptvLaunch = args.parentMetaId.startsWith("iptv:")
         val iptvSystemPipEnabled by IptvSettingsRepository.systemPipEnabled.collectAsStateWithLifecycle()
-        if (!isIptvLaunch || iptvSystemPipEnabled) {
+        if ((!isIptvLaunch || iptvSystemPipEnabled) && !args.minimized) {
             ManagePlayerPictureInPicture(
                 isPlaying = runtime.playbackSnapshot.isPlaying,
                 videoSize = IntSize(
@@ -159,6 +166,10 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
             )
         }
         runtime.BindPlayerRuntimeEffects()
-        runtime.RenderPlayerRuntimeUi()
+        runtime.RenderPlayerRuntimeUi(
+            minimized = args.minimized,
+            onExpandMiniPlayer = args.onExpandMiniPlayer,
+            onCloseMiniPlayer = args.onCloseMiniPlayer,
+        )
     }
 }

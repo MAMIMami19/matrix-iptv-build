@@ -10,6 +10,9 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -40,6 +43,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
@@ -49,6 +53,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
 import com.nuvio.app.core.ui.LocalPosterClickAnchor
+import com.nuvio.app.core.ui.PlatformBackHandler
 import com.nuvio.app.navigation.PosterNavigationState
 import com.nuvio.app.navigation.posterNavigationEntry
 import com.nuvio.app.core.auth.AuthRepository
@@ -140,6 +145,8 @@ import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.player.SubtitleLanguageOption
 import com.nuvio.app.features.player.prepareExternalPlayerLaunch
 import com.nuvio.app.features.player.LockPlayerToLandscape
+import com.nuvio.app.features.player.PlayerScreen
+import com.nuvio.app.features.player.rememberPlayerOrientationController
 import com.nuvio.app.features.player.HidePlayerSystemBars
 import com.nuvio.app.features.player.rememberExternalPlayerLauncher
 import com.nuvio.app.features.profiles.ProfileRepository
@@ -315,8 +322,29 @@ internal fun MainAppContent(
         PlayerSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
     var visiblePlayerEntries by remember { mutableIntStateOf(0) }
+    // YouTube-style mini-player (Android phones only, gated by the same
+    // phone-only orientation controller the player rotate button uses:
+    // null on TV, tablets, multi-window and iOS). An IPTV launch is
+    // hosted at the app root above the tabs instead of as a PlayerRoute
+    // destination, so playback survives tab navigation. The session key
+    // changes only when a NEW item is launched (fresh runtime);
+    // minimize/expand only flips the flag and the size modifier, keeping
+    // the video surface (and its native player) in the same slot.
+    var iptvMiniLaunch by remember { mutableStateOf<PlayerLaunch?>(null) }
+    var iptvMiniMinimized by remember { mutableStateOf(false) }
+    var iptvMiniSessionKey by remember { mutableStateOf(0L) }
+    val iptvMiniPlayerSupported = rememberPlayerOrientationController() != null
+    // A classic full-screen player (e.g. catalog playback) wins over the
+    // mini-player: starting one closes the mini session.
+    LaunchedEffect(currentRoute) {
+        if (currentRoute is PlayerRoute) {
+            iptvMiniLaunch = null
+        }
+    }
     var streamLandscapeLoadingVisible by remember(currentRoute) { mutableStateOf(false) }
-    if (currentRoute is PlayerRoute || visiblePlayerEntries > 0 || streamLandscapeLoadingVisible) {
+    if (currentRoute is PlayerRoute || visiblePlayerEntries > 0 || streamLandscapeLoadingVisible ||
+        (iptvMiniLaunch != null && !iptvMiniMinimized)
+    ) {
         LockPlayerToLandscape()
         HidePlayerSystemBars()
     }
@@ -1420,8 +1448,24 @@ internal fun MainAppContent(
                                         parentMetaType = contentType,
                                         iptvPlaylist = playlist,
                                     )
-                                    val launchId = PlayerLaunchStore.put(playerLaunch)
-                                    navController.navigate(PlayerRoute(launchId = launchId, title = playerLaunch.title))
+                                    if (iptvMiniPlayerSupported) {
+                                        // Phones: host at the app root as a
+                                        // mini-player session. A first
+                                        // launch opens expanded; a new
+                                        // item tapped while browsing
+                                        // replaces the mini-player
+                                        // content without leaving the
+                                        // tabs.
+                                        val wasActive = iptvMiniLaunch != null
+                                        iptvMiniLaunch = playerLaunch
+                                        iptvMiniSessionKey += 1
+                                        if (!wasActive) {
+                                            iptvMiniMinimized = false
+                                        }
+                                    } else {
+                                        val launchId = PlayerLaunchStore.put(playerLaunch)
+                                        navController.navigate(PlayerRoute(launchId = launchId, title = playerLaunch.title))
+                                    }
                                 },
                                 onConnectCloudClick = {
                                     if (useNativeNavigation && !isTabletLayout) {
@@ -1723,6 +1767,86 @@ internal fun MainAppContent(
                 )
                 }
             }
+            }
+
+            // YouTube-style mini-player overlay (phones only): hosted at
+            // the app root above the tabs. The SAME PlayerScreen call
+            // site renders both states — only the modifiers and the
+            // minimized flag change — so the video surface (and its
+            // native player) survives minimize/expand without restart.
+            // A new item is a new session key (fresh runtime). The
+            // wrapper Box (transparent) holds the 88.dp gap above the
+            // bottom nav bar in minimized mode; the bar itself is 76.dp.
+            iptvMiniLaunch?.let { miniLaunch ->
+                key(iptvMiniSessionKey) {
+                    LaunchedEffect(miniLaunch.videoId) {
+                        miniLaunch.videoId?.let { ResumePromptRepository.markPlayerEntered(it) }
+                    }
+                    if (!iptvMiniMinimized) {
+                        PlatformBackHandler(enabled = true) {
+                            iptvMiniMinimized = true
+                        }
+                    }
+                    Box(
+                        modifier = if (iptvMiniMinimized) {
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .padding(bottom = 88.dp)
+                        } else {
+                            Modifier.fillMaxSize()
+                        },
+                    ) {
+                        PlayerScreen(
+                            profileId = miniLaunch.profileId,
+                            title = miniLaunch.title,
+                            sourceUrl = miniLaunch.sourceUrl,
+                            sourceAudioUrl = miniLaunch.sourceAudioUrl,
+                            sourceHeaders = miniLaunch.sourceHeaders,
+                            sourceResponseHeaders = miniLaunch.sourceResponseHeaders,
+                            externalSubtitles = miniLaunch.externalSubtitles,
+                            streamType = miniLaunch.streamType,
+                            logo = miniLaunch.logo,
+                            poster = miniLaunch.poster,
+                            background = miniLaunch.background,
+                            seasonNumber = miniLaunch.seasonNumber,
+                            episodeNumber = miniLaunch.episodeNumber,
+                            episodeTitle = miniLaunch.episodeTitle,
+                            episodeThumbnail = miniLaunch.episodeThumbnail,
+                            streamTitle = miniLaunch.streamTitle,
+                            streamSubtitle = miniLaunch.streamSubtitle,
+                            initialBingeGroup = miniLaunch.bingeGroup,
+                            pauseDescription = miniLaunch.pauseDescription,
+                            providerName = miniLaunch.providerName,
+                            providerAddonId = miniLaunch.providerAddonId,
+                            contentType = miniLaunch.contentType,
+                            videoId = miniLaunch.videoId,
+                            parentMetaId = miniLaunch.parentMetaId,
+                            parentMetaType = miniLaunch.parentMetaType,
+                            torrentInfoHash = miniLaunch.torrentInfoHash,
+                            torrentFileIdx = miniLaunch.torrentFileIdx,
+                            torrentFilename = miniLaunch.torrentFilename,
+                            torrentTrackers = miniLaunch.torrentTrackers,
+                            initialPositionMs = miniLaunch.initialPositionMs,
+                            initialProgressFraction = miniLaunch.initialProgressFraction,
+                            contentLanguage = miniLaunch.contentLanguage,
+                            sourceFilename = miniLaunch.sourceFilename,
+                            stream = miniLaunch.stream,
+                            iptvPlaylist = miniLaunch.iptvPlaylist,
+                            onBack = { iptvMiniMinimized = true },
+                            minimized = iptvMiniMinimized,
+                            onExpandMiniPlayer = { iptvMiniMinimized = false },
+                            onCloseMiniPlayer = { iptvMiniLaunch = null },
+                            modifier = if (iptvMiniMinimized) {
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(76.dp)
+                            } else {
+                                Modifier.fillMaxSize()
+                            },
+                        )
+                    }
+                }
             }
 
             selectedPosterActionTarget?.let { posterActionTarget ->
