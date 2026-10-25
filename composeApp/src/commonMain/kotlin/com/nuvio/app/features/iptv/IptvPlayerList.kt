@@ -10,7 +10,7 @@ package com.nuvio.app.features.iptv
  * episodes. Series themselves are not playable (they open an episode list
  * in the tab) and are therefore never playlist entries.
  */
-internal data class IptvPlayerListItem(
+data class IptvPlayerListItem(
     val title: String,
     val streamId: Int,
     val url: String,

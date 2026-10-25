@@ -396,7 +396,7 @@ internal fun LiveTvScreen(
                 val list = categories.orEmpty()
                     .filterNot { adultHidden && IptvSettingsRepository.isAdultCategory(it.categoryName) }
                 val groupCounts: Map<String, Int>? = allChannels
-                    ?.groupBy { it.categoryId }
+                    ?.groupBy { it.categoryId ?: "" }
                     ?.mapValues { (_, items) -> items.size }
                 val visibleFavorites = favorites.filterNot {
                     adultHidden && it.groupName != null &&
@@ -987,7 +987,7 @@ internal fun VodScreen(
                                     iconUrl = null,
                                     name = episodeTitle,
                                     infoLine = "Episode ${episode.episodeNum ?: ""}",
-                                ) {
+                                    onClick = {
                                     IptvSettingsRepository.addPlayedIptvKey(
                                         "iptv:${episode.id}",
                                         "iptv:${episode.id}",
@@ -1002,7 +1002,7 @@ internal fun VodScreen(
                                         "series",
                                         episodePlaylist,
                                     )
-                                }
+                                },
                             }
                         }
                     }
