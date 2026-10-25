@@ -29,17 +29,54 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import kotlin.math.roundToInt
 
+/**
+ * Phone player orientation (historical name: this used to force landscape).
+ * While the player is active the activity now follows the device sensor:
+ * portrait shows the small player, landscape the big fullscreen player, and
+ * rotating switches between the two without recreating the activity (the
+ * manifest handles orientation config changes, so playback is uninterrupted).
+ * The player rotate button sets a manual override instead; it is cleared
+ * when the player exits so the next session starts sensor-following again.
+ * Tablets, multi-window and TV are untouched (see [shouldForceLandscapePlayer]).
+ */
 @Composable
 actual fun LockPlayerToLandscape() {
     val activity = LocalContext.current.findActivity() ?: return
     if (!activity.shouldForceLandscapePlayer()) return
+    val mode = PlayerOrientationState.mode
 
-    DisposableEffect(activity) {
+    DisposableEffect(activity, mode) {
         val previousOrientation = activity.requestedOrientation
-        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        activity.requestedOrientation = when (mode) {
+            PlayerOrientationMode.Portrait -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            PlayerOrientationMode.Landscape -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            PlayerOrientationMode.Sensor -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
+        }
 
         onDispose {
             activity.requestedOrientation = previousOrientation
+            PlayerOrientationState.reset()
+        }
+    }
+}
+
+@Composable
+actual fun rememberPlayerOrientationController(): PlayerOrientationController? {
+    val activity = LocalContext.current.findActivity() ?: return null
+    if (!activity.shouldForceLandscapePlayer()) return null
+    return remember(activity) {
+        object : PlayerOrientationController {
+            override fun toggle() {
+                val isLandscape = activity.resources.configuration.orientation ==
+                    android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                PlayerOrientationState.setMode(
+                    if (isLandscape) {
+                        PlayerOrientationMode.Portrait
+                    } else {
+                        PlayerOrientationMode.Landscape
+                    },
+                )
+            }
         }
     }
 }

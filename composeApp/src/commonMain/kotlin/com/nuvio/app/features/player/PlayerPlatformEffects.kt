@@ -2,7 +2,10 @@ package com.nuvio.app.features.player
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.IntSize
 
 interface PlayerGestureController {
@@ -19,6 +22,40 @@ data class PlayerAudioLevel(
 
 @Composable
 expect fun LockPlayerToLandscape()
+
+/**
+ * Phone player orientation mode. Sensor follows the device (portrait =
+ * small player, landscape = big fullscreen); Portrait / Landscape are the
+ * manual overrides set by the player rotate button. Only the Android phone
+ * player applies this; TV, tablets and iOS are unaffected.
+ */
+enum class PlayerOrientationMode {
+    Sensor,
+    Portrait,
+    Landscape,
+}
+
+object PlayerOrientationState {
+    var mode by mutableStateOf(PlayerOrientationMode.Sensor)
+        private set
+
+    fun setMode(newMode: PlayerOrientationMode) {
+        mode = newMode
+    }
+
+    fun reset() {
+        mode = PlayerOrientationMode.Sensor
+    }
+}
+
+/** Null on platforms/form factors without a manual rotate control. */
+interface PlayerOrientationController {
+    /** Flips small (portrait) <-> big (landscape) from the current orientation. */
+    fun toggle()
+}
+
+@Composable
+expect fun rememberPlayerOrientationController(): PlayerOrientationController?
 
 @Composable
 expect fun FullscreenPlayerDialog(

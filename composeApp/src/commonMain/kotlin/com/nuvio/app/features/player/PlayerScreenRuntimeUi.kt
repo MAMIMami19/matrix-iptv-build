@@ -4,19 +4,41 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.NuvioStatusModal
+import com.nuvio.app.features.iptv.FavoriteChannel
+import com.nuvio.app.features.iptv.IptvSettingsRepository
 import com.nuvio.app.features.p2p.P2pStreamingState
 import com.nuvio.app.features.party.PartyRepository
 import com.nuvio.app.features.p2p.formatP2pMegabytes
@@ -277,13 +299,17 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
     val partyState by PartyRepository.state.collectAsStateWithLifecycle()
     val partyActive = partyState.party != null
     val playerBadges = rememberPlayerBadges()
+    // Manual rotate control: only on Android phones (null elsewhere, so no
+    // button on TV, tablets or iOS). The IPTV list button only appears when
+    // this session was launched from the IPTV / Live TV tabs.
+    val orientationController = rememberPlayerOrientationController()
     AnimatedVisibility(
         visible = (controlsVisible || showParentalGuide) && !playerControlsLocked && !isInPip,
         enter = fadeIn(),
         exit = fadeOut(),
     ) {
         PlayerControlsShell(
-            title = title,
+            title = iptvActiveTitle ?: title,
             streamTitle = activeStreamTitle,
             providerName = activeProviderName,
             seasonNumber = activeSeasonNumber,
@@ -343,6 +369,14 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             },
             onSourcesClick = if (activeVideoId != null) { { openSourcesPanel() } } else null,
             onEpisodesClick = if (isSeries) { { openEpisodesPanel() } } else null,
+            onIptvListClick = if (iptvPlaylist.isNotEmpty()) {
+                { showIptvListPanel = true }
+            } else {
+                null
+            },
+            onRotateClick = orientationController?.let { controller ->
+                { controller.toggle() }
+            },
             onOpenInExternalPlayer = args.onOpenInExternalPlayer
                 ?.takeUnless { ServerStreams.isServerSourceId(activeProviderAddonId) }
                 ?.let { openExternal ->
@@ -714,6 +748,96 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
                 switchPlaybackEngine()
             },
             onDismiss = { showSwitchEngineConfirm = false },
+        )
+    }
+    // IPTV / Live TV in-player list: only for sessions launched from those
+    // tabs (playlist non-empty). Selecting an entry switches the source in
+    // this same player session; live channels also get a favorite star here.
+    if (showIptvListPanel && iptvPlaylist.isNotEmpty()) {
+        IptvSettingsRepository.ensureLoaded()
+        val favoriteIds by IptvSettingsRepository.favoriteChannels
+            .collectAsStateWithLifecycle()
+        val favoriteIdSet = favoriteIds.map { it.streamId }.toSet()
+        AlertDialog(
+            onDismissRequest = {
+                showIptvListPanel = false
+                controlsVisible = true
+            },
+            title = { Text("List") },
+            text = {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().height(420.dp),
+                ) {
+                    items(iptvPlaylist, key = { it.streamId }) { item ->
+                        val isCurrent = item.url == activeSourceUrl
+                        val isFavorite = item.streamId in favoriteIdSet
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                                .clickable { switchToIptvPlaylistItem(item) }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                modifier = Modifier.size(48.dp)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (!item.iconUrl.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = item.iconUrl,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                } else {
+                                    Text(
+                                        text = "▶",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.size(12.dp))
+                            Text(
+                                text = item.title,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (isCurrent) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (item.contentType == "tv") {
+                                TextButton(
+                                    onClick = {
+                                        IptvSettingsRepository.toggleFavoriteChannel(
+                                            FavoriteChannel(
+                                                streamId = item.streamId,
+                                                name = item.title,
+                                                iconUrl = item.iconUrl,
+                                                groupName = item.groupName,
+                                            ),
+                                        )
+                                    },
+                                ) {
+                                    Text(if (isFavorite) "★" else "☆")
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showIptvListPanel = false
+                        controlsVisible = true
+                    },
+                ) { Text("Close") }
+            },
         )
     }
 }

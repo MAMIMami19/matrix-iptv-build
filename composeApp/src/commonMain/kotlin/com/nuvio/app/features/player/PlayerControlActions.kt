@@ -21,8 +21,10 @@ import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.List
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SwapHoriz
@@ -112,6 +114,8 @@ internal fun PlayerControlActions(
     onAudioClick: () -> Unit,
     onSourcesClick: (() -> Unit)?,
     onEpisodesClick: (() -> Unit)?,
+    onIptvListClick: (() -> Unit)?,
+    onRotateClick: (() -> Unit)?,
     onNextEpisodeClick: (() -> Unit)?,
     onSpeedClick: () -> Unit,
     onResizeModeClick: () -> Unit,
@@ -146,6 +150,18 @@ internal fun PlayerControlActions(
             PlayerControlAction(
                 stringResource(Res.string.compose_player_episodes), it,
                 painter = appIconPainter(AppIconResource.PlayerEpisodes),
+            )
+        },
+        onIptvListClick?.let {
+            PlayerControlAction(
+                "List", it,
+                icon = Icons.Rounded.List,
+            )
+        },
+        onRotateClick?.let {
+            PlayerControlAction(
+                "Rotate", it,
+                icon = Icons.Rounded.ScreenRotation,
             )
         },
         PlayerControlAction(

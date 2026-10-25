@@ -9,6 +9,8 @@ import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.downloads.DownloadItem
 import com.nuvio.app.features.downloads.DownloadSubtitles
 import com.nuvio.app.features.downloads.DownloadsRepository
+import com.nuvio.app.features.iptv.IptvPlayerListItem
+import com.nuvio.app.features.iptv.IptvSettingsRepository
 import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.features.p2p.P2pStreamingEngine
 import com.nuvio.app.features.servers.ServerPlayback
@@ -340,6 +342,51 @@ internal fun PlayerScreenRuntime.switchToSource(
     showSourcesPanel = false
     controlsVisible = true
     PlayerStreamsRepository.pauseSearchForPlayback()
+}
+
+/**
+ * In-player IPTV / Live TV switch: replaces the current source with another
+ * playlist entry in the same player session (no navigation, no exit to the
+ * tab). Mirrors the direct-URL part of [switchToSource]: previous progress
+ * is flushed, the new identity (URL + videoId) re-keys playback through
+ * [resetIdentityStateIfNeeded], and the new item is recorded for the
+ * clear-on-close setting like a tab launch.
+ */
+internal fun PlayerScreenRuntime.switchToIptvPlaylistItem(item: IptvPlayerListItem) {
+    if (item.url == activeSourceUrl) {
+        showIptvListPanel = false
+        controlsVisible = true
+        return
+    }
+    flushWatchProgress()
+    stopActiveP2pStream()
+    IptvSettingsRepository.addPlayedIptvKey(
+        "iptv:${item.streamId}",
+        "iptv:${item.streamId}",
+    )
+    externalSubtitles = emptyList()
+    activeSourceUrl = item.url
+    activeSourceAudioUrl = null
+    activeSourceHeaders = emptyMap()
+    activeSourceResponseHeaders = emptyMap()
+    activeStreamType = null
+    activeSourceIdentityKey = "url:${item.url}"
+    activeStreamTitle = item.title
+    iptvActiveTitle = item.title
+    activeProviderName = "NOVA"
+    activeProviderAddonId = null
+    activeStream = null
+    currentStreamBingeGroup = null
+    currentStreamFilename = null
+    currentStreamInfoHash = null
+    activeVideoId = "iptv:${item.streamId}"
+    activeSeasonNumber = item.seasonNumber
+    activeEpisodeNumber = item.episodeNumber
+    activeEpisodeTitle = null
+    activeInitialPositionMs = 0L
+    activeInitialProgressFraction = null
+    showIptvListPanel = false
+    controlsVisible = true
 }
 
 internal fun PlayerScreenRuntime.switchToEpisodeStream(

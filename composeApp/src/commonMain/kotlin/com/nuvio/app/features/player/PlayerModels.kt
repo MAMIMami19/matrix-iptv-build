@@ -48,6 +48,12 @@ data class PlayerLaunch(
     val contentLanguage: String? = null,
     val sourceFilename: String? = null,
     val stream: com.nuvio.app.features.streams.StreamItem? = null,
+    /**
+     * IPTV / Live TV in-player list. Empty for catalog playback: the list
+     * button is only offered when this list is non-empty, so regular
+     * playback is untouched.
+     */
+    val iptvPlaylist: List<com.nuvio.app.features.iptv.IptvPlayerListItem> = emptyList(),
 )
 
 object PlayerLaunchStore {

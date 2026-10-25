@@ -93,7 +93,13 @@ internal data class AppTabActions(
     val onLibraryPosterLongClick: ((LibraryItem, LibrarySection) -> Unit)? = null,
     val onLibrarySectionViewAllClick: ((LibrarySection, LibrarySortOption) -> Unit)? = null,
     val onCloudFilePlay: ((CloudLibraryItem, CloudLibraryFile) -> Unit)? = null,
-    val onXtreamPlay: ((title: String, streamId: Int, url: String, contentType: String) -> Unit)? = null,
+    val onXtreamPlay: ((
+        title: String,
+        streamId: Int,
+        url: String,
+        contentType: String,
+        playlist: List<com.nuvio.app.features.iptv.IptvPlayerListItem>,
+    ) -> Unit)? = null,
     val onConnectCloudClick: (() -> Unit)? = null,
     val onDownloadsClick: () -> Unit = {},
     val onContinueWatchingClick: ((ContinueWatchingItem) -> Unit)? = null,
@@ -199,8 +205,8 @@ internal fun AppTabHost(
                 VodScreen(
                     modifier = Modifier.fillMaxSize(),
                     isSelectedTab = selectedTab == AppScreenTab.Iptv,
-                    onPlay = { title, streamId, url, contentType ->
-                        actions.onXtreamPlay?.invoke(title, streamId, url, contentType)
+                    onPlay = { title, streamId, url, contentType, playlist ->
+                        actions.onXtreamPlay?.invoke(title, streamId, url, contentType, playlist)
                     },
                 )
             }
@@ -209,8 +215,8 @@ internal fun AppTabHost(
                 LiveTvScreen(
                     modifier = Modifier.fillMaxSize(),
                     isSelectedTab = selectedTab == AppScreenTab.LiveTv,
-                    onPlay = { title, streamId, url, contentType ->
-                        actions.onXtreamPlay?.invoke(title, streamId, url, contentType)
+                    onPlay = { title, streamId, url, contentType, playlist ->
+                        actions.onXtreamPlay?.invoke(title, streamId, url, contentType, playlist)
                     },
                 )
             }

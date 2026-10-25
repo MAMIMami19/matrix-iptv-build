@@ -48,8 +48,18 @@ import com.nuvio.app.features.profiles.PinVerifyResult
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import kotlinx.coroutines.launch
 
-/** Play callback: title, stream id, resolved stream URL, content type ("tv", "movie", "series"). */
-internal typealias XtreamPlayHandler = (title: String, streamId: Int, url: String, contentType: String) -> Unit
+/**
+ * Play callback: title, stream id, resolved stream URL, content type
+ * ("tv", "movie", "series"), and the in-player list for this playback
+ * (the tab's current list; empty when there is none).
+ */
+internal typealias XtreamPlayHandler = (
+    title: String,
+    streamId: Int,
+    url: String,
+    contentType: String,
+    playlist: List<IptvPlayerListItem>,
+) -> Unit
 
 @Composable
 private fun IptvLoading() {
@@ -94,6 +104,11 @@ private fun IptvSearchField(query: String, onQueryChange: (String) -> Unit) {
         label = { Text("Search") },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
+        trailingIcon = if (query.isNotEmpty()) {
+            { TextButton(onClick = { onQueryChange("") }) { Text("✕") } }
+        } else {
+            null
+        },
     )
     Spacer(modifier = Modifier.height(8.dp))
 }
@@ -147,6 +162,8 @@ private fun IptvChannelRow(
     name: String,
     infoLine: String,
     onClick: () -> Unit,
+    isFavorite: Boolean? = null,
+    onFavoriteToggle: (() -> Unit)? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
@@ -189,6 +206,12 @@ private fun IptvChannelRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        // Favorite star: only for live channels (null = no star, e.g. episodes).
+        if (isFavorite != null && onFavoriteToggle != null) {
+            TextButton(onClick = onFavoriteToggle) {
+                Text(if (isFavorite) "★" else "☆")
+            }
         }
     }
 }
@@ -256,8 +279,15 @@ internal fun LiveTvScreen(
     var selected by remember { mutableStateOf<XtreamCategory?>(null) }
     var channels by remember { mutableStateOf<List<XtreamLiveStream>?>(null) }
     var query by remember { mutableStateOf("") }
+    var globalQuery by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
     var failed by remember { mutableStateOf(false) }
+    // Full catalog, loaded once in the background: powers the header total,
+    // the per-group count badges and the global search. Null while loading;
+    // a failure leaves it null (counts/search stay unavailable, never guessed).
+    var allChannels by remember { mutableStateOf<List<XtreamLiveStream>?>(null) }
+    var allChannelsFailed by remember { mutableStateOf(false) }
+    val favorites by IptvSettingsRepository.favoriteChannels.collectAsState()
     val scope = rememberCoroutineScope()
 
     fun loadCategories() {
@@ -270,6 +300,17 @@ internal fun LiveTvScreen(
                 failed = true
             }
             loading = false
+        }
+    }
+
+    fun loadAllChannels() {
+        if (allChannels != null || allChannelsFailed) return
+        scope.launch {
+            try {
+                allChannels = XtreamClient.liveStreamsAll()
+            } catch (_: Exception) {
+                allChannelsFailed = true
+            }
         }
     }
 
@@ -290,15 +331,59 @@ internal fun LiveTvScreen(
         selected = category
         channels = null
         query = ""
+        globalQuery = ""
         loadChannels(category)
     }
 
-    LaunchedEffect(Unit) { loadCategories() }
+    fun playChannel(channel: XtreamLiveStream, playlist: List<IptvPlayerListItem>) {
+        IptvSettingsRepository.addPlayedIptvKey(
+            "iptv:${channel.streamId}",
+            "iptv:${channel.streamId}",
+        )
+        onPlay(
+            channel.name,
+            channel.streamId,
+            XtreamClient.liveStreamUrl(channel.streamId),
+            "tv",
+            playlist,
+        )
+    }
+
+    fun playFavorite(fav: FavoriteChannel, playlist: List<FavoriteChannel>) {
+        IptvSettingsRepository.addPlayedIptvKey(
+            "iptv:${fav.streamId}",
+            "iptv:${fav.streamId}",
+        )
+        onPlay(
+            fav.name,
+            fav.streamId,
+            XtreamClient.liveStreamUrl(fav.streamId),
+            "tv",
+            playlist.map { it.toPlayerListItem() },
+        )
+    }
+
+    LaunchedEffect(Unit) {
+        loadCategories()
+        loadAllChannels()
+    }
+
+    val categoryNameById = categories.orEmpty()
+        .associate { it.categoryId to it.categoryName }
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         Text(
             "Live TV",
             style = MaterialTheme.typography.titleLarge,
+        )
+        Text(
+            text = if (allChannels != null) {
+                "${allChannels!!.size} channels"
+            } else {
+                "… channels"
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(12.dp))
         when {
@@ -310,47 +395,174 @@ internal fun LiveTvScreen(
             selected == null -> {
                 val list = categories.orEmpty()
                     .filterNot { adultHidden && IptvSettingsRepository.isAdultCategory(it.categoryName) }
-                if (list.isEmpty()) {
+                val groupCounts: Map<String, Int>? = allChannels
+                    ?.groupBy { it.categoryId }
+                    ?.mapValues { (_, items) -> items.size }
+                val visibleFavorites = favorites.filterNot {
+                    adultHidden && it.groupName != null &&
+                        IptvSettingsRepository.isAdultCategory(it.groupName)
+                }
+                if (list.isEmpty() && globalQuery.isBlank()) {
                     IptvEmpty(message = "No channels found", onRetry = { loadCategories() })
                 } else {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Groupes",
-                            style = MaterialTheme.typography.titleMedium,
+                        IptvSearchField(
+                            query = globalQuery,
+                            onQueryChange = { globalQuery = it },
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LazyRow {
-                            items(list, key = { it.categoryId }) { category ->
-                                IptvChip(label = category.categoryName) {
-                                    selectGroup(category)
+                        if (globalQuery.isNotBlank()) {
+                            when {
+                                allChannels == null && !allChannelsFailed -> Box(
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                    contentAlignment = Alignment.Center,
+                                ) { CircularProgressIndicator() }
+                                allChannelsFailed -> Column {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text("Failed to load")
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Button(
+                                        onClick = {
+                                            allChannelsFailed = false
+                                            loadAllChannels()
+                                        },
+                                    ) { Text("Retry") }
+                                }
+                                else -> {
+                                    val results = allChannels.orEmpty().filter { channel ->
+                                        channel.name.contains(globalQuery, ignoreCase = true) &&
+                                            !(adultHidden && categoryNameById[channel.categoryId]
+                                                ?.let { IptvSettingsRepository.isAdultCategory(it) } == true)
+                                    }
+                                    if (results.isEmpty()) {
+                                        Text("No results")
+                                    } else {
+                                        LazyColumn(modifier = Modifier.weight(1f)) {
+                                            items(results, key = { it.streamId }) { channel ->
+                                                IptvChannelRow(
+                                                    iconUrl = channel.streamIcon,
+                                                    name = channel.name,
+                                                    infoLine = categoryNameById[channel.categoryId]
+                                                        .orEmpty()
+                                                        .ifBlank { "Pas d'informations" },
+                                                    onClick = {
+                                                        playChannel(
+                                                            channel,
+                                                            results.map {
+                                                                it.toPlayerListItem(categoryNameById[it.categoryId])
+                                                            },
+                                                        )
+                                                    },
+                                                    isFavorite = favorites.any {
+                                                        it.streamId == channel.streamId
+                                                    },
+                                                    onFavoriteToggle = {
+                                                        IptvSettingsRepository.toggleFavoriteChannel(
+                                                            FavoriteChannel(
+                                                                streamId = channel.streamId,
+                                                                name = channel.name,
+                                                                iconUrl = channel.streamIcon,
+                                                                groupName = categoryNameById[channel.categoryId],
+                                                            ),
+                                                        )
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Mes Groupes",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LazyColumn(modifier = Modifier.weight(1f)) {
-                            items(list, key = { it.categoryId }) { category ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth()
-                                        .clickable { selectGroup(category) }
-                                        .padding(vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
+                        } else {
+                            LazyColumn(modifier = Modifier.weight(1f)) {
+                                item(key = "fav-header") {
                                     Text(
-                                        text = category.categoryName,
+                                        text = "Favoris",
                                         style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.weight(1f),
                                     )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+                                if (visibleFavorites.isEmpty()) {
+                                    item(key = "fav-empty") {
+                                        Text(
+                                            text = "No favorites yet",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                    }
+                                } else {
+                                    items(
+                                        visibleFavorites,
+                                        key = { "fav-${it.streamId}" },
+                                    ) { fav ->
+                                        IptvChannelRow(
+                                            iconUrl = fav.iconUrl,
+                                            name = fav.name,
+                                            infoLine = fav.groupName.orEmpty()
+                                                .ifBlank { "Pas d'informations" },
+                                            onClick = { playFavorite(fav, visibleFavorites) },
+                                            isFavorite = true,
+                                            onFavoriteToggle = {
+                                                IptvSettingsRepository.toggleFavoriteChannel(fav)
+                                            },
+                                        )
+                                    }
+                                    item(key = "fav-spacer") {
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                    }
+                                }
+                                item(key = "groupes-header") {
                                     Text(
-                                        text = ">",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        text = "Groupes",
+                                        style = MaterialTheme.typography.titleMedium,
                                     )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    LazyRow {
+                                        items(list, key = { it.categoryId }) { category ->
+                                            IptvChip(label = category.categoryName) {
+                                                selectGroup(category)
+                                            }
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        text = "Mes Groupes",
+                                        style = MaterialTheme.typography.titleMedium,
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+                                items(list, key = { it.categoryId }) { category ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth()
+                                            .clickable { selectGroup(category) }
+                                            .padding(vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = category.categoryName,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        groupCounts?.get(category.categoryId)?.let { count ->
+                                            Box(
+                                                modifier = Modifier.clip(RoundedCornerShape(50))
+                                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                                            ) {
+                                                Text(
+                                                    text = count.toString(),
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onSurface,
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                        }
+                                        Text(
+                                            text = ">",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -359,7 +571,9 @@ internal fun LiveTvScreen(
             }
             else -> {
                 val category = selected!!
-                TextButton(onClick = { selected = null; channels = null; query = "" }) {
+                TextButton(
+                    onClick = { selected = null; channels = null; query = ""; globalQuery = "" },
+                ) {
                     Text("Back")
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -400,18 +614,26 @@ internal fun LiveTvScreen(
                                 iconUrl = channel.streamIcon,
                                 name = channel.name,
                                 infoLine = "Pas d'informations",
-                            ) {
-                                IptvSettingsRepository.addPlayedIptvKey(
-                                    "iptv:${channel.streamId}",
-                                    "iptv:${channel.streamId}",
-                                )
-                                onPlay(
-                                    channel.name,
-                                    channel.streamId,
-                                    XtreamClient.liveStreamUrl(channel.streamId),
-                                    "tv",
-                                )
-                            }
+                                onClick = {
+                                    playChannel(
+                                        channel,
+                                        shown.map { it.toPlayerListItem(category.categoryName) },
+                                    )
+                                },
+                                isFavorite = favorites.any {
+                                    it.streamId == channel.streamId
+                                },
+                                onFavoriteToggle = {
+                                    IptvSettingsRepository.toggleFavoriteChannel(
+                                        FavoriteChannel(
+                                            streamId = channel.streamId,
+                                            name = channel.name,
+                                            iconUrl = channel.streamIcon,
+                                            groupName = category.categoryName,
+                                        ),
+                                    )
+                                },
+                            )
                         }
                     }
                 }
@@ -436,7 +658,7 @@ private fun VodSectionShelf(
     series: List<XtreamSeries>?,
     onLoad: () -> Unit,
     onOpenCategory: () -> Unit,
-    onPlayMovie: (XtreamVodStream) -> Unit,
+    onPlayMovie: (XtreamVodStream, List<XtreamVodStream>) -> Unit,
     onOpenSeries: (XtreamSeries) -> Unit,
 ) {
     LaunchedEffect(category.categoryId, vodType) { onLoad() }
@@ -445,10 +667,20 @@ private fun VodSectionShelf(
     // Skip sections that loaded but are empty; loading/failed sections still
     // render their header so the user sees progress or can retry.
     if (status == 1 && shownMovies.isEmpty() && shownSeries.isEmpty()) return
+    // Per-category count from the actually loaded section items (full list,
+    // not just the 20 shown); absent while loading.
+    val sectionCount = if (status == 1) {
+        if (vodType == VodType.Movies) movies?.size else series?.size
+    } else {
+        null
+    }
     Column(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Ajouts récents - ${category.categoryName}",
+                text = buildString {
+                    append("Ajouts récents - ${category.categoryName}")
+                    if (sectionCount != null) append(" ($sectionCount)")
+                },
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
@@ -473,7 +705,7 @@ private fun VodSectionShelf(
                             IptvPosterCard(
                                 imageUrl = movie.streamIcon,
                                 title = movie.name,
-                                onClick = { onPlayMovie(movie) },
+                                onClick = { onPlayMovie(movie, movies.orEmpty()) },
                                 modifier = Modifier.width(120.dp),
                             )
                         }
@@ -541,8 +773,15 @@ internal fun VodScreen(
     var selectedSeries by remember { mutableStateOf<XtreamSeries?>(null) }
     var seriesInfo by remember { mutableStateOf<XtreamSeriesInfo?>(null) }
     var query by remember { mutableStateOf("") }
+    var globalQuery by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
     var failed by remember { mutableStateOf(false) }
+    // Full VOD catalog, loaded once in the background: powers the header
+    // totals and the global search. Null while loading; a failure leaves it
+    // null (totals/search stay unavailable, never guessed).
+    var allMovies by remember { mutableStateOf<List<XtreamVodStream>?>(null) }
+    var allSeries by remember { mutableStateOf<List<XtreamSeries>?>(null) }
+    var allVodFailed by remember { mutableStateOf(false) }
     // Per-section shelf caches, keyed by category id, plus a status map keyed
     // by "Type:categoryId" (0 = loading, 1 = ok, 2 = failed).
     val movieSections = remember { mutableStateMapOf<String, List<XtreamVodStream>>() }
@@ -564,6 +803,18 @@ internal fun VodScreen(
                 failed = true
             }
             loading = false
+        }
+    }
+
+    fun loadAllVod() {
+        if ((allMovies != null && allSeries != null) || allVodFailed) return
+        scope.launch {
+            try {
+                if (allMovies == null) allMovies = XtreamClient.vodStreamsAll()
+                if (allSeries == null) allSeries = XtreamClient.seriesAll()
+            } catch (_: Exception) {
+                allVodFailed = true
+            }
         }
     }
 
@@ -628,10 +879,11 @@ internal fun VodScreen(
     fun openCategory(category: XtreamCategory) {
         selectedCategory = category
         query = ""
+        globalQuery = ""
         loadItems(category)
     }
 
-    fun playMovie(movie: XtreamVodStream) {
+    fun playMovie(movie: XtreamVodStream, playlist: List<XtreamVodStream>) {
         IptvSettingsRepository.addPlayedIptvKey(
             "iptv:${movie.streamId}",
             "iptv:${movie.streamId}",
@@ -644,6 +896,7 @@ internal fun VodScreen(
                 movie.containerExtension,
             ),
             "movie",
+            playlist.map { it.toPlayerListItem() },
         )
     }
 
@@ -653,12 +906,20 @@ internal fun VodScreen(
         loadEpisodes(series)
     }
 
-    LaunchedEffect(Unit) { loadCategories() }
+    LaunchedEffect(Unit) {
+        loadCategories()
+        loadAllVod()
+    }
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         Text(
             "IPTV",
             style = MaterialTheme.typography.titleLarge,
+        )
+        Text(
+            text = "${allMovies?.size ?: "…"} films • ${allSeries?.size ?: "…"} séries",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(12.dp))
         Row {
@@ -669,6 +930,7 @@ internal fun VodScreen(
                         selectedCategory = null
                         selectedSeries = null
                         query = ""
+                        globalQuery = ""
                         loadCategories()
                     }
                 },
@@ -680,6 +942,7 @@ internal fun VodScreen(
                         selectedCategory = null
                         selectedSeries = null
                         query = ""
+                        globalQuery = ""
                         loadCategories()
                     }
                 },
@@ -696,6 +959,14 @@ internal fun VodScreen(
                 }
                 val seasons = (seriesInfo?.episodes.orEmpty()).entries
                     .sortedBy { (season, _) -> season.toIntOrNull() ?: 0 }
+                // Full episode list for the in-player list (season order).
+                val episodePlaylist: List<IptvPlayerListItem> = seasons.flatMap { (seasonKey, eps) ->
+                    eps.map { ep ->
+                        val epTitle = ep.title?.takeIf { it.isNotBlank() }
+                            ?: "Episode ${ep.episodeNum ?: ""}"
+                        ep.toPlayerListItem(series.name, epTitle, seasonKey.toIntOrNull())
+                    }
+                }
                 if (seasons.isEmpty()) {
                     IptvEmpty(message = "No episodes found", onRetry = { loadEpisodes(series) })
                 } else {
@@ -729,6 +1000,7 @@ internal fun VodScreen(
                                             episode.containerExtension,
                                         ),
                                         "series",
+                                        episodePlaylist,
                                     )
                                 }
                             }
@@ -738,9 +1010,23 @@ internal fun VodScreen(
             }
             selectedCategory != null -> {
                 val category = selectedCategory!!
-                TextButton(onClick = { selectedCategory = null; query = "" }) {
+                TextButton(
+                    onClick = { selectedCategory = null; query = ""; globalQuery = "" },
+                ) {
                     Text("Back")
                 }
+                // Category header with its item count once loaded.
+                val categoryCount = if (vodType == VodType.Movies) movies?.size else seriesList?.size
+                Text(
+                    text = if (categoryCount != null) {
+                        "${category.categoryName} ($categoryCount)"
+                    } else {
+                        category.categoryName
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
                 IptvSearchField(query = query, onQueryChange = { query = it })
                 if (vodType == VodType.Movies) {
                     val shown = movies.orEmpty().filter {
@@ -761,7 +1047,7 @@ internal fun VodScreen(
                                 IptvPosterCard(
                                     imageUrl = movie.streamIcon,
                                     title = movie.name,
-                                    onClick = { playMovie(movie) },
+                                    onClick = { playMovie(movie, shown) },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                             }
@@ -800,22 +1086,94 @@ internal fun VodScreen(
                 } else {
                     seriesCats.orEmpty()
                 }.filterNot { adultHidden && IptvSettingsRepository.isAdultCategory(it.categoryName) }
-                if (list.isEmpty()) {
+                // Category-name lookups for adult-filtering global results.
+                val vodCategoryNameById = vodCats.orEmpty()
+                    .associate { it.categoryId to it.categoryName }
+                val seriesCategoryNameById = seriesCats.orEmpty()
+                    .associate { it.categoryId to it.categoryName }
+                if (list.isEmpty() && globalQuery.isBlank()) {
                     IptvEmpty(message = "No items found", onRetry = { loadCategories() })
                 } else {
-                    LazyColumn(modifier = Modifier.weight(1f)) {
-                        items(list, key = { it.categoryId }) { category ->
-                            VodSectionShelf(
-                                category = category,
-                                vodType = vodType,
-                                status = sectionStatus[vodType.name + ":" + category.categoryId],
-                                movies = movieSections[category.categoryId],
-                                series = seriesSections[category.categoryId],
-                                onLoad = { loadSection(category) },
-                                onOpenCategory = { openCategory(category) },
-                                onPlayMovie = ::playMovie,
-                                onOpenSeries = ::openSeries,
-                            )
+                    Column(modifier = Modifier.weight(1f)) {
+                        IptvSearchField(
+                            query = globalQuery,
+                            onQueryChange = { globalQuery = it },
+                        )
+                        if (globalQuery.isNotBlank()) {
+                            when {
+                                (allMovies == null || allSeries == null) && !allVodFailed -> Box(
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                    contentAlignment = Alignment.Center,
+                                ) { CircularProgressIndicator() }
+                                allVodFailed -> Column {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text("Failed to load")
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Button(
+                                        onClick = {
+                                            allVodFailed = false
+                                            loadAllVod()
+                                        },
+                                    ) { Text("Retry") }
+                                }
+                                else -> {
+                                    // Global search: movies and series together,
+                                    // by title substring, across all categories.
+                                    val movieMatches = allMovies.orEmpty().filter { movie ->
+                                        movie.name.contains(globalQuery, ignoreCase = true) &&
+                                            !(adultHidden && vodCategoryNameById[movie.categoryId]
+                                                ?.let { IptvSettingsRepository.isAdultCategory(it) } == true)
+                                    }
+                                    val seriesMatches = allSeries.orEmpty().filter { series ->
+                                        series.name.contains(globalQuery, ignoreCase = true) &&
+                                            !(adultHidden && seriesCategoryNameById[series.categoryId]
+                                                ?.let { IptvSettingsRepository.isAdultCategory(it) } == true)
+                                    }
+                                    if (movieMatches.isEmpty() && seriesMatches.isEmpty()) {
+                                        Text("No results")
+                                    } else {
+                                        LazyVerticalGrid(
+                                            columns = GridCells.Adaptive(minSize = 120.dp),
+                                            modifier = Modifier.weight(1f),
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                                        ) {
+                                            items(movieMatches, key = { it.streamId }) { movie ->
+                                                IptvPosterCard(
+                                                    imageUrl = movie.streamIcon,
+                                                    title = movie.name,
+                                                    onClick = { playMovie(movie, movieMatches) },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                )
+                                            }
+                                            items(seriesMatches, key = { it.seriesId }) { series ->
+                                                IptvPosterCard(
+                                                    imageUrl = series.cover,
+                                                    title = series.name,
+                                                    onClick = { openSeries(series) },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            LazyColumn(modifier = Modifier.weight(1f)) {
+                                items(list, key = { it.categoryId }) { category ->
+                                    VodSectionShelf(
+                                        category = category,
+                                        vodType = vodType,
+                                        status = sectionStatus[vodType.name + ":" + category.categoryId],
+                                        movies = movieSections[category.categoryId],
+                                        series = seriesSections[category.categoryId],
+                                        onLoad = { loadSection(category) },
+                                        onOpenCategory = { openCategory(category) },
+                                        onPlayMovie = { movie, playlist -> playMovie(movie, playlist) },
+                                        onOpenSeries = ::openSeries,
+                                    )
+                                }
+                            }
                         }
                     }
                 }

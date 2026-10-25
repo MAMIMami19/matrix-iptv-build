@@ -41,6 +41,10 @@ actual fun LockPlayerToLandscape() {
     }
 }
 
+/** No manual rotate control on iOS: the landscape lock above is unchanged. */
+@Composable
+actual fun rememberPlayerOrientationController(): PlayerOrientationController? = null
+
 @Composable
 actual fun FullscreenPlayerDialog(onDismiss: () -> Unit, content: @Composable () -> Unit) {
     Dialog(

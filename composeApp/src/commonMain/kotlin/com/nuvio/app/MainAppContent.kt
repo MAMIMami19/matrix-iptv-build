@@ -1406,7 +1406,7 @@ internal fun MainAppContent(
                                         }
                                     }
                                 },
-                                onXtreamPlay = { title, streamId, url, contentType ->
+                                onXtreamPlay = { title, streamId, url, contentType, playlist ->
                                     val playerLaunch = PlayerLaunch(
                                         profileId = activePlaybackProfileId,
                                         title = title,
@@ -1418,6 +1418,7 @@ internal fun MainAppContent(
                                         videoId = "iptv:$streamId",
                                         parentMetaId = "iptv:$streamId",
                                         parentMetaType = contentType,
+                                        iptvPlaylist = playlist,
                                     )
                                     val launchId = PlayerLaunchStore.put(playerLaunch)
                                     navController.navigate(PlayerRoute(launchId = launchId, title = playerLaunch.title))

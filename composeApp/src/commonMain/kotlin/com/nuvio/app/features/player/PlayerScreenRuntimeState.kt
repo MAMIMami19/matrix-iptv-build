@@ -165,6 +165,16 @@ internal class PlayerScreenRuntime(
 
     var showSourcesPanel by mutableStateOf(false)
     var showEpisodesPanel by mutableStateOf(false)
+    /**
+     * IPTV / Live TV in-player list (fixed at launch time, empty for catalog
+     * playback) and its panel visibility. The displayed title override
+     * follows in-player switches, since [title] itself comes from the
+     * immutable launch args.
+     */
+    var iptvPlaylist: List<com.nuvio.app.features.iptv.IptvPlayerListItem> =
+        args.iptvPlaylist
+    var showIptvListPanel by mutableStateOf(false)
+    var iptvActiveTitle by mutableStateOf<String?>(null)
     var showSubmitIntroModal by mutableStateOf(false)
     var showSwitchEngineConfirm by mutableStateOf(false)
     var submitIntroSegmentType by mutableStateOf("intro")

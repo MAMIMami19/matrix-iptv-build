@@ -21,6 +21,7 @@ internal data class XtreamLiveStream(
     @SerialName("stream_id") val streamId: Int,
     @SerialName("name") val name: String,
     @SerialName("stream_icon") val streamIcon: String? = null,
+    @SerialName("category_id") val categoryId: String? = null,
 )
 
 @Serializable
@@ -29,6 +30,7 @@ internal data class XtreamVodStream(
     @SerialName("name") val name: String,
     @SerialName("stream_icon") val streamIcon: String? = null,
     @SerialName("container_extension") val containerExtension: String? = null,
+    @SerialName("category_id") val categoryId: String? = null,
 )
 
 @Serializable
@@ -36,6 +38,7 @@ internal data class XtreamSeries(
     @SerialName("series_id") val seriesId: Int,
     @SerialName("name") val name: String,
     @SerialName("cover") val cover: String? = null,
+    @SerialName("category_id") val categoryId: String? = null,
 )
 
 @Serializable
@@ -85,17 +88,29 @@ internal object XtreamClient {
     suspend fun liveStreams(categoryId: String): List<XtreamLiveStream> =
         json.decodeFromString(getText("get_live_streams", "category_id" to categoryId))
 
+    /** All live streams across every group (no category filter). */
+    suspend fun liveStreamsAll(): List<XtreamLiveStream> =
+        json.decodeFromString(getText("get_live_streams"))
+
     suspend fun vodCategories(): List<XtreamCategory> =
         json.decodeFromString(getText("get_vod_categories"))
 
     suspend fun vodStreams(categoryId: String): List<XtreamVodStream> =
         json.decodeFromString(getText("get_vod_streams", "category_id" to categoryId))
 
+    /** All movies across every VOD group (no category filter). */
+    suspend fun vodStreamsAll(): List<XtreamVodStream> =
+        json.decodeFromString(getText("get_vod_streams"))
+
     suspend fun seriesCategories(): List<XtreamCategory> =
         json.decodeFromString(getText("get_series_categories"))
 
     suspend fun series(categoryId: String): List<XtreamSeries> =
         json.decodeFromString(getText("get_series", "category_id" to categoryId))
+
+    /** All series across every series group (no category filter). */
+    suspend fun seriesAll(): List<XtreamSeries> =
+        json.decodeFromString(getText("get_series"))
 
     suspend fun seriesInfo(seriesId: Int): XtreamSeriesInfo =
         json.decodeFromString(getText("get_series_info", "series_id" to seriesId.toString()))

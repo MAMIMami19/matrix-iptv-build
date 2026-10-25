@@ -32,4 +32,7 @@ internal expect object IptvSettingsStorage {
     fun saveOnlineSubtitleSources(json: String)
     fun loadOnlineSubtitlePreferredLanguages(): String?
     fun saveOnlineSubtitlePreferredLanguages(codesCsv: String)
+    /** JSON array of favorite Live TV channels (see FavoriteChannel). */
+    fun loadFavoriteChannels(): String?
+    fun saveFavoriteChannels(json: String)
 }

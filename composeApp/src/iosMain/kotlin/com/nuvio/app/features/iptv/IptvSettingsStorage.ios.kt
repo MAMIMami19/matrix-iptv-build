@@ -15,6 +15,7 @@ actual object IptvSettingsStorage {
     private const val onlineSubtitlePasswordKey = "iptv_online_subtitle_password"
     private const val onlineSubtitleSourcesKey = "iptv_online_subtitle_sources"
     private const val onlineSubtitlePreferredLanguagesKey = "iptv_online_subtitle_preferred_languages"
+    private const val favoriteChannelsKey = "iptv_favorite_channels"
 
     private fun loadBoolean(key: String): Boolean? {
         val defaults = NSUserDefaults.standardUserDefaults
@@ -68,4 +69,6 @@ actual object IptvSettingsStorage {
     actual fun saveOnlineSubtitleSources(json: String) = saveString(onlineSubtitleSourcesKey, json)
     actual fun loadOnlineSubtitlePreferredLanguages(): String? = loadString(onlineSubtitlePreferredLanguagesKey)
     actual fun saveOnlineSubtitlePreferredLanguages(codesCsv: String) = saveString(onlineSubtitlePreferredLanguagesKey, codesCsv)
+    actual fun loadFavoriteChannels(): String? = loadString(favoriteChannelsKey)
+    actual fun saveFavoriteChannels(json: String) = saveString(favoriteChannelsKey, json)
 }

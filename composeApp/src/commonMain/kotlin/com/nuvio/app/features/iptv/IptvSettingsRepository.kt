@@ -17,6 +17,19 @@ internal data class OnlineSubtitleSource(
 )
 
 /**
+ * One favorite Live TV channel. The full mini-record is stored (not just the
+ * id) so the Favoris section can render and play without re-fetching the
+ * whole channel catalog. Scope is Live TV channels only (nova live).
+ */
+@Serializable
+internal data class FavoriteChannel(
+    val streamId: Int,
+    val name: String = "",
+    val iconUrl: String? = null,
+    val groupName: String? = null,
+)
+
+/**
  * IPTV / Live TV settings, copied from the reference IPTV app's settings screens.
  *
  * Reuse map (existing Nuvio behavior is reused, not duplicated):
@@ -80,6 +93,11 @@ internal object IptvSettingsRepository {
     val onlineSubtitlePreferredLanguages: StateFlow<Set<String>> =
         _onlineSubtitlePreferredLanguages.asStateFlow()
 
+    /** Favorite Live TV channels, persisted as a JSON array (see storage). */
+    private val _favoriteChannels = MutableStateFlow<List<FavoriteChannel>>(emptyList())
+    val favoriteChannels: StateFlow<List<FavoriteChannel>> =
+        _favoriteChannels.asStateFlow()
+
     /** Session-only unlock flag: in-memory, never persisted. */
     private val _sessionUnlocked = MutableStateFlow(false)
     val sessionUnlocked: StateFlow<Boolean> = _sessionUnlocked.asStateFlow()
@@ -141,6 +159,10 @@ internal object IptvSettingsRepository {
                 ?.toSet()
                 ?.takeIf { it.isNotEmpty() }
                 ?: setOf("ar")
+        _favoriteChannels.value =
+            IptvSettingsStorage.loadFavoriteChannels()?.let { raw ->
+                runCatching { Json.decodeFromString<List<FavoriteChannel>>(raw) }.getOrNull()
+            }.orEmpty()
     }
 
     fun setLockAdultCategories(enabled: Boolean) {
@@ -231,6 +253,21 @@ internal object IptvSettingsRepository {
         if (_onlineSubtitlePreferredLanguages.value == codes) return
         _onlineSubtitlePreferredLanguages.value = codes
         IptvSettingsStorage.saveOnlineSubtitlePreferredLanguages(codes.joinToString(","))
+    }
+
+    fun isFavoriteChannel(streamId: Int): Boolean =
+        _favoriteChannels.value.any { it.streamId == streamId }
+
+    fun toggleFavoriteChannel(channel: FavoriteChannel) {
+        ensureLoaded()
+        val current = _favoriteChannels.value
+        val updated = if (current.any { it.streamId == channel.streamId }) {
+            current.filterNot { it.streamId == channel.streamId }
+        } else {
+            current + channel
+        }
+        _favoriteChannels.value = updated
+        IptvSettingsStorage.saveFavoriteChannels(Json.encodeToString(updated))
     }
 
     /** Adult categories are matched by name (Xtream has no adult flag). */

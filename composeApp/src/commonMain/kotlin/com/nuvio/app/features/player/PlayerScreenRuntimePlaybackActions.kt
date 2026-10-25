@@ -77,7 +77,7 @@ internal val PlayerScreenRuntime.playbackSession: WatchProgressPlaybackSession
             episodeNumber = activeEpisodeNumber,
             fallbackVideoId = activeVideoId,
         ),
-        title = title,
+        title = iptvActiveTitle ?: title,
         logo = logo,
         poster = poster,
         background = background,
