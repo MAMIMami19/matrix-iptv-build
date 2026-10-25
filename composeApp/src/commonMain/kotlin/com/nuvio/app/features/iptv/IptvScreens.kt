@@ -1002,7 +1002,7 @@ internal fun VodScreen(
                                         "series",
                                         episodePlaylist,
                                     )
-                                },
+                                })
                             }
                         }
                     }
