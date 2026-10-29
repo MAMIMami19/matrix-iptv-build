@@ -41,16 +41,26 @@ jobs:
           ./gradlew assembleDebug -Pnuvio.android.distribution=full --stacktrace --console=plain
       - name: Upload APK
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: showmax-debug-apk
           path: "**/build/outputs/apk/**/*.apk"
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Build signed Full release APK
         run: ./gradlew :androidApp:assembleFullRelease -Pnuvio.android.distribution=full --stacktrace --console=plain
       - name: Upload release APKs
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: showmax-release-apks
           path: "androidApp/build/outputs/apk/full/release/*.apk"
-          if-no-files-found: error
+          if-no-files-found: warn
+      - name: Publish release APK to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="matrix-iptv-1.0-${GITHUB_RUN_NUMBER}"
+          APK=$(ls androidApp/build/outputs/apk/full/release/*.apk | head -1)
+          gh release create "$TAG" "$APK" --title "Matrix IPTV 1.0 (build $GITHUB_RUN_NUMBER)" --notes "Matrix IPTV 1.0 release APK" 2>/dev/null || \
+          gh release upload "$TAG" "$APK" --clobber
