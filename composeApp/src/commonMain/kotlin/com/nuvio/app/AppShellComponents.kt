@@ -174,6 +174,15 @@ internal fun AppTabHost(
                     )
                 }
             }
+            AppScreenTab.Trending -> {
+                key("tab_trending") {
+                    com.nuvio.app.features.matrix.MatrixTrendingScreen(
+                        onPosterClick = actions.onPosterClick,
+                        onPlayClick = actions.onPosterClick,
+                        onMyListClick = null,
+                    )
+                }
+            }
             AppScreenTab.Search -> {
                 SearchScreen(
                     modifier = Modifier.fillMaxSize(),

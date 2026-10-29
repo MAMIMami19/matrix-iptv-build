@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.OndemandVideo
 import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -104,6 +105,12 @@ internal fun MainTabsDestination(
                 label = "مسلسلات",
             ),
             FloatingNavigationItem(
+                selected = selectedTab == AppScreenTab.Trending,
+                onClick = { onTabSelected(AppScreenTab.Trending) },
+                icon = Icons.Filled.Whatshot,
+                label = "جديد ورائج",
+            ),
+            FloatingNavigationItem(
                 selected = selectedTab == AppScreenTab.MyList,
                 onClick = { onTabSelected(AppScreenTab.MyList) },
                 icon = Icons.Filled.Bookmark,
@@ -164,6 +171,12 @@ internal fun MainTabsDestination(
                             onClick = { onTabSelected(AppScreenTab.Series) },
                             icon = Icons.Filled.Subscriptions,
                             contentDescription = "مسلسلات",
+                        )
+                        NavItem(
+                            selected = selectedTab == AppScreenTab.Trending,
+                            onClick = { onTabSelected(AppScreenTab.Trending) },
+                            icon = Icons.Filled.Whatshot,
+                            contentDescription = "جديد ورائج",
                         )
                         NavItem(
                             selected = selectedTab == AppScreenTab.MyList,

@@ -24,6 +24,10 @@ data class NuvioProfile(
     @SerialName("pin_locked_until") val pinLockedUntil: String? = null,
     @SerialName("created_at") val createdAt: String = "",
     @SerialName("updated_at") val updatedAt: String = "",
+    /** Showflix-style: preferred watch languages (e.g. ["ar", "fr"]). Empty = all. */
+    @SerialName("watch_languages") val watchLanguages: List<String> = emptyList(),
+    /** Showflix-style: favorite genres (e.g. ["Action", "Drama"]). */
+    @SerialName("favorite_genres") val favoriteGenres: List<String> = emptyList(),
 )
 
 @Serializable
@@ -37,6 +41,8 @@ data class ProfilePushPayload(
     @SerialName("avatar_url") val avatarUrl: String? = null,
     @SerialName("profile_background_id") val profileBackgroundId: String? = null,
     @SerialName("profile_background_url") val profileBackgroundUrl: String? = null,
+    @SerialName("watch_languages") val watchLanguages: List<String> = emptyList(),
+    @SerialName("favorite_genres") val favoriteGenres: List<String> = emptyList(),
 )
 
 @Serializable

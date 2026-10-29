@@ -219,6 +219,8 @@ object ProfileRepository {
         avatarId: String? = null,
         avatarUrl: String? = null,
         usesPrimaryAddons: Boolean = false,
+        watchLanguages: List<String> = emptyList(),
+        favoriteGenres: List<String> = emptyList(),
     ) {
         val existing = _state.value.profiles
         val nextIndex = ((1..MAX_PROFILES).toSet() - existing.map { it.profileIndex }.toSet()).minOrNull() ?: return
@@ -234,6 +236,8 @@ object ProfileRepository {
                 avatarUrl = profile.avatarUrl,
                 profileBackgroundId = profile.profileBackgroundId,
                 profileBackgroundUrl = profile.profileBackgroundUrl,
+                watchLanguages = profile.watchLanguages,
+                favoriteGenres = profile.favoriteGenres,
             )
         } + ProfilePushPayload(
             profileIndex = nextIndex,
@@ -242,6 +246,8 @@ object ProfileRepository {
             usesPrimaryAddons = usesPrimaryAddons,
             avatarId = avatarId,
             avatarUrl = avatarUrl,
+            watchLanguages = watchLanguages,
+            favoriteGenres = favoriteGenres,
         )
 
         pushProfiles(allPayloads)
@@ -256,6 +262,8 @@ object ProfileRepository {
         profileBackgroundId: String? = null,
         profileBackgroundUrl: String? = null,
         usesPrimaryAddons: Boolean = false,
+        watchLanguages: List<String> = emptyList(),
+        favoriteGenres: List<String> = emptyList(),
     ) {
         val allPayloads = _state.value.profiles.map { profile ->
             if (profile.profileIndex == profileIndex) {
@@ -268,6 +276,8 @@ object ProfileRepository {
                     avatarUrl = avatarUrl,
                     profileBackgroundId = profileBackgroundId,
                     profileBackgroundUrl = profileBackgroundUrl,
+                    watchLanguages = watchLanguages,
+                    favoriteGenres = favoriteGenres,
                 )
             } else {
                 ProfilePushPayload(
@@ -280,6 +290,8 @@ object ProfileRepository {
                     avatarUrl = profile.avatarUrl,
                     profileBackgroundId = profile.profileBackgroundId,
                     profileBackgroundUrl = profile.profileBackgroundUrl,
+                    watchLanguages = profile.watchLanguages,
+                    favoriteGenres = profile.favoriteGenres,
                 )
             }
         }

@@ -78,6 +78,8 @@ fun ProfileEditScreen(
     var selectedBackgroundId by rememberSaveable { mutableStateOf(currentProfile?.profileBackgroundId) }
     var selectedBackgroundUrl by rememberSaveable { mutableStateOf(currentProfile?.profileBackgroundUrl) }
     var usesPrimaryAddons by rememberSaveable { mutableStateOf(currentProfile?.usesPrimaryAddons ?: false) }
+    var watchLanguages by rememberSaveable { mutableStateOf(currentProfile?.watchLanguages ?: emptyList()) }
+    var favoriteGenres by rememberSaveable { mutableStateOf(currentProfile?.favoriteGenres ?: emptyList()) }
     var isSaving by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showPinSetup by remember { mutableStateOf(false) }
@@ -234,6 +236,22 @@ fun ProfileEditScreen(
             }
         }
 
+        // Matrix: Showflix-style personalization (watch languages + favorite genres).
+        item {
+            NuvioSurfaceCard {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    com.nuvio.app.features.matrix.MatrixWatchLanguageChips(
+                        selected = watchLanguages,
+                        onSelectionChange = { watchLanguages = it },
+                    )
+                    com.nuvio.app.features.matrix.MatrixGenreChips(
+                        selected = favoriteGenres,
+                        onSelectionChange = { favoriteGenres = it },
+                    )
+                }
+            }
+        }
+
         if (!isNew) {
             item {
                 NuvioSurfaceCard {
@@ -290,6 +308,8 @@ fun ProfileEditScreen(
                                 avatarId = if (customAvatarUrl == null) selectedAvatarId else null,
                                 avatarUrl = customAvatarUrl,
                                 usesPrimaryAddons = usesPrimaryAddons,
+                                watchLanguages = watchLanguages,
+                                favoriteGenres = favoriteGenres,
                             )
                         } else {
                             ProfileRepository.updateProfile(
@@ -301,6 +321,8 @@ fun ProfileEditScreen(
                                 profileBackgroundId = selectedBackgroundId,
                                 profileBackgroundUrl = selectedBackgroundUrl,
                                 usesPrimaryAddons = usesPrimaryAddons,
+                                watchLanguages = watchLanguages,
+                                favoriteGenres = favoriteGenres,
                             )
                         }
                         isSaving = false
