@@ -32,9 +32,9 @@ fun resolveAppTheme(
             .filterValues(entitlements::includes)
             .keys
             .firstOrNull()
-            ?: AppTheme.SHOWMAX
+            ?: AppTheme.MATRIX
     }
-    return selectedTheme.takeIf { it in availableAppThemes(entitlements) } ?: AppTheme.SHOWMAX
+    return selectedTheme.takeIf { it in availableAppThemes(entitlements) } ?: AppTheme.MATRIX
 }
 
 fun resolveCustomThemeColors(colors: CustomThemeColors, memberTier: MemberTier?): CustomThemeColors =

@@ -104,7 +104,7 @@ internal fun buildInfusePlaybackUrl(request: ExternalPlayerPlaybackRequest, sess
         append(subtitle.url.encodeURLParameter())
     }
     append("&x-success=")
-    append("nuvio://external-player/infuse/$sessionId/success".encodeURLParameter())
+    append("matrix://external-player/infuse/$sessionId/success".encodeURLParameter())
     append("&x-error=")
-    append("nuvio://external-player/infuse/$sessionId/error".encodeURLParameter())
+    append("matrix://external-player/infuse/$sessionId/error".encodeURLParameter())
 }

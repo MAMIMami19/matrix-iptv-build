@@ -21,7 +21,7 @@ object ThemeSettingsRepository {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _selectedThemePreference = MutableStateFlow<AppTheme?>(null)
     val selectedThemePreference: StateFlow<AppTheme?> = _selectedThemePreference.asStateFlow()
-    private val _selectedTheme = MutableStateFlow(AppTheme.SHOWMAX)
+    private val _selectedTheme = MutableStateFlow(AppTheme.MATRIX)
     val selectedTheme: StateFlow<AppTheme> = _selectedTheme.asStateFlow()
 
     private val _customThemePreference = MutableStateFlow(CustomThemeColors.Default)
@@ -60,12 +60,12 @@ object ThemeSettingsRepository {
     fun clearLocalState() {
         hasLoaded = false
         _selectedThemePreference.value = null
-        _selectedTheme.value = AppTheme.SHOWMAX
+        _selectedTheme.value = AppTheme.MATRIX
         _customThemePreference.value = CustomThemeColors.Default
         _customThemeColors.value = CustomThemeColors.solid(CustomThemeColors.Default.second)
         _amoledEnabled.value = false
         _liquidGlassNativeTabBarEnabled.value = false
-        NativeTabBridge.publishAccentColor(ThemeColors.Showmax.nativeAccentHex)
+        NativeTabBridge.publishAccentColor(ThemeColors.Matrix.nativeAccentHex)
         NativeTabBridge.publishLiquidGlassEnabled(false)
         _selectedAppLanguage.value = AppLanguage.DEVICE
         _navBarGlowEnabled.value = true
@@ -124,6 +124,7 @@ object ThemeSettingsRepository {
             AppTheme.STARZPLAY -> Triple(140, 10, false)
             AppTheme.PRIME -> Triple(140, 8, false)
             AppTheme.CANAL -> Triple(150, 6, false)
+            AppTheme.MATRIX -> Triple(140, 14, false)
             else -> null
         } ?: return
         PosterCardStyleRepository.setCatalogLandscapeModeEnabled(preset.third)
@@ -136,6 +137,7 @@ object ThemeSettingsRepository {
             AppTheme.SHAHID, AppTheme.CANAL -> AppIconOption.ROSE_GOLD
             AppTheme.PARAMOUNT, AppTheme.DISNEY, AppTheme.PRIME -> AppIconOption.ARCTIC_BLUE
             AppTheme.STARZPLAY -> AppIconOption.EMERALD
+            AppTheme.MATRIX -> AppIconOption.ORIGINAL
             else -> null
         } ?: return
         scope.launch { AppIconRepository.select(icon) }

@@ -151,8 +151,19 @@ open class MainActivity : AppCompatActivity() {
         EpisodeReleaseNotificationPlatform.bindActivity(this)
         handleIncomingAppIntent(intent)
 
+        val coldStart = savedInstanceState == null
         setContent {
-            App()
+            var showSplash by androidx.compose.runtime.remember {
+                androidx.compose.runtime.mutableStateOf(coldStart)
+            }
+            androidx.compose.foundation.layout.Box(
+                modifier = androidx.compose.ui.Modifier.fillMaxSize(),
+            ) {
+                App()
+                if (showSplash) {
+                    MatrixSplashVideo(onFinished = { showSplash = false })
+                }
+            }
         }
     }
 

@@ -186,6 +186,25 @@ object ThemeColors {
         backgroundCard = Color(0xFF131E30),
     )
 
+    val Matrix = ThemeColorPalette(
+        secondary = Color(0xFFA855F7),
+        secondaryVariant = Color(0xFF7C3AED),
+        accentGradient = listOf(
+            Color(0xFFFF7A1A),
+            Color(0xFFEC4899),
+            Color(0xFFA855F7),
+            Color(0xFF3B82F6),
+        ),
+        nativeAccentHex = "#A855F7",
+        onSecondary = Color.White,
+        onSecondaryVariant = Color.White,
+        focusRing = Color(0xFFA855F7),
+        focusBackground = Color(0xFF1E1430),
+        background = Color(0xFF0A0A0F),
+        backgroundElevated = Color(0xFF121218),
+        backgroundCard = Color(0xFF1A1A24),
+    )
+
     val Osn = ThemeColorPalette(
         secondary = Color(0xFFFF00D4),
         secondaryVariant = Color(0xFFC400A5),
@@ -344,5 +363,6 @@ object ThemeColors {
         AppTheme.STARZPLAY -> Starzplay
         AppTheme.PRIME -> Prime
         AppTheme.CANAL -> Canal
+        AppTheme.MATRIX -> Matrix
     }
 }

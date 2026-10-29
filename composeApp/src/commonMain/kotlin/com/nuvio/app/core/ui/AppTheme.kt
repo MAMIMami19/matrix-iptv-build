@@ -41,6 +41,7 @@ enum class AppTheme(val displayLabel: String? = null) {
     STARZPLAY("STARZPLAY"),
     PRIME("Prime Video"),
     CANAL("myCANAL"),
+    MATRIX("Matrix"),
 }
 
 val AppTheme.labelRes: StringResource
@@ -69,4 +70,5 @@ val AppTheme.labelRes: StringResource
         AppTheme.STARZPLAY -> Res.string.theme_custom
         AppTheme.PRIME -> Res.string.theme_custom
         AppTheme.CANAL -> Res.string.theme_custom
+        AppTheme.MATRIX -> Res.string.theme_custom
     }

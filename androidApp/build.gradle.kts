@@ -50,7 +50,7 @@ val buildsReleaseApks = requestedTaskNames.any {
 }
 
 android {
-    namespace = "com.nuvio.android"
+    namespace = "com.matrixiptv.android"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     compileSdkMinor = libs.versions.android.compileSdkMinor.get().toInt()
 
@@ -66,11 +66,12 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.nuvio.app"
+        applicationId = "com.matrixiptv.app"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = releaseAppVersionCode
-        versionName = releaseAppVersionName
+        // Matrix IPTV is a fresh app: version starts at 1/1.0 (does not follow the iOS xcconfig).
+        versionCode = 1
+        versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -145,7 +146,7 @@ android {
 
 androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->
-        variant.applicationId.set("com.nuviodebug.com")
+        variant.applicationId.set("com.matrixiptv.debug")
     }
 }
 

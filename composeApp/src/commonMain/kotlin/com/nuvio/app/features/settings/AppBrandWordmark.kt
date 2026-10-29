@@ -1,30 +1,23 @@
 package com.nuvio.app.features.settings
 
-import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.material3.MaterialTheme
-import com.nuvio.app.core.ui.appTheme
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.jetbrains.compose.resources.painterResource
+import coil3.compose.AsyncImage
 
+/**
+ * Matrix IPTV brand wordmark. Loaded from androidApp assets (NOT composeResources —
+ * new compose resources get no generated accessors in CI builds). The logo is used
+ * as-is (colorful gradient M + white wordmark) for every theme.
+ */
 @Composable
 internal fun AppBrandWordmark(
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
     icon: AppIconOption? = null,
 ) {
-    val state by remember {
-        AppIconRepository.ensureLoaded()
-        AppIconRepository.state
-    }.collectAsStateWithLifecycle()
-    Image(
-        painter = painterResource(
-            icon?.wordmarkResource ?: MaterialTheme.appTheme.wordmarkResource(state.selected),
-        ),
+    AsyncImage(
+        model = "file:///android_asset/matrix_wordmark.png",
         contentDescription = contentDescription,
         modifier = modifier,
         contentScale = ContentScale.Fit,

@@ -357,7 +357,7 @@ data class NuvioThemeTokens(
 )
 
 internal val LocalNuvioThemeTokens = staticCompositionLocalOf {
-    defaultNuvioThemeTokens(ThemeColors.Showmax, amoled = false, colorScheme = null)
+    defaultNuvioThemeTokens(ThemeColors.Matrix, amoled = false, colorScheme = null)
 }
 
 val MaterialTheme.nuvio: NuvioThemeTokens

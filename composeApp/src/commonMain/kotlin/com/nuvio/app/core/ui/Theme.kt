@@ -25,8 +25,8 @@ import nuvio.composeapp.generated.resources.jetbrains_sans_regular
 import nuvio.composeapp.generated.resources.jetbrains_sans_semibold
 import org.jetbrains.compose.resources.Font
 
-val LocalAppTheme = staticCompositionLocalOf { AppTheme.SHOWMAX }
-val LocalThemePalette = staticCompositionLocalOf { ThemeColors.Showmax }
+val LocalAppTheme = staticCompositionLocalOf { AppTheme.MATRIX }
+val LocalThemePalette = staticCompositionLocalOf { ThemeColors.Matrix }
 
 val MaterialTheme.themePalette: ThemeColorPalette
     @Composable
@@ -195,7 +195,7 @@ private val NuvioRippleConfiguration = RippleConfiguration(
 @Composable
 fun NuvioTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    appTheme: AppTheme = AppTheme.SHOWMAX,
+    appTheme: AppTheme = AppTheme.MATRIX,
     amoled: Boolean = false,
     customThemeColors: CustomThemeColors = CustomThemeColors.Default,
     content: @Composable () -> Unit,

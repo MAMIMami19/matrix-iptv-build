@@ -127,7 +127,7 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 |object TraktConfig {
                 |    const val CLIENT_ID = "${props.getProperty("TRAKT_CLIENT_ID", "")}" 
                 |    const val CLIENT_SECRET = "${props.getProperty("TRAKT_CLIENT_SECRET", "")}" 
-                |    const val REDIRECT_URI = "${props.getProperty("TRAKT_REDIRECT_URI", "nuvio://auth/trakt")}" 
+                |    const val REDIRECT_URI = "${props.getProperty("TRAKT_REDIRECT_URI", "matrix://auth/trakt")}" 
                 |}
                 """.trimMargin()
             )
@@ -141,8 +141,8 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 |
                 |object SimklConfig {
                 |    const val CLIENT_ID = "${props.getProperty("SIMKL_CLIENT_ID", "")}"
-                |    const val REDIRECT_URI = "${props.getProperty("SIMKL_REDIRECT_URI", "nuvio://auth/simkl")}"
-                |    const val APP_NAME = "${props.getProperty("SIMKL_APP_NAME", "nuvio")}"
+                |    const val REDIRECT_URI = "${props.getProperty("SIMKL_REDIRECT_URI", "matrix://auth/simkl")}"
+                |    const val APP_NAME = "${props.getProperty("SIMKL_APP_NAME", "matrixiptv")}"
                 |}
                 """.trimMargin()
             )
@@ -260,12 +260,9 @@ val supabaseProps = Properties().apply {
     if (propsFile.exists()) propsFile.inputStream().use { load(it) }
 }
 val appVersionConfigFile = rootProject.file("iosApp/Configuration/Version.xcconfig")
-val releaseAppVersionName = providers.gradleProperty("nuvio.app.versionName").orNull
-    ?: readXcconfigValue(appVersionConfigFile, "MARKETING_VERSION")
-    ?: error("MARKETING_VERSION is missing from ${appVersionConfigFile.path}")
-val releaseAppVersionCode = readXcconfigValue(appVersionConfigFile, "CURRENT_PROJECT_VERSION")
-    ?.toIntOrNull()
-    ?: error("CURRENT_PROJECT_VERSION is missing or invalid in ${appVersionConfigFile.path}")
+// Matrix IPTV is a fresh app: version starts at 1/1.0 (does not follow the iOS xcconfig).
+val releaseAppVersionName = "1.0"
+val releaseAppVersionCode = 1
 val iosDistribution = (
     providers.gradleProperty("nuvio.ios.distribution").orNull
         ?: System.getenv("NUVIO_IOS_DISTRIBUTION")
@@ -367,7 +364,7 @@ tasks.withType<KotlinCompilationTask<*>>().configureEach {
 
 kotlin {
     android {
-        namespace = "com.nuvio.app"
+        namespace = "com.matrixiptv.app"
         compileSdk {
             version = release(libs.versions.android.compileSdk.get().toInt()) {
                 minorApiLevel = libs.versions.android.compileSdkMinor.get().toInt()
