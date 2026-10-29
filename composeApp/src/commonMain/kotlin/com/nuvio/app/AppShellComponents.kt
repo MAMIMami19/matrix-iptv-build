@@ -41,7 +41,6 @@ import com.nuvio.app.features.settings.AppBrandWordmark
 import com.nuvio.app.features.settings.SettingsScreen
 import com.nuvio.app.features.watchprogress.ContinueWatchingItem
 import com.nuvio.app.navigation.AppRoute
-import com.nuvio.app.navigation.MatrixBrandRoute
 import com.nuvio.app.navigation.NuvioNavigator
 import kotlinx.coroutines.flow.Flow
 import nuvio.composeapp.generated.resources.Res
@@ -122,6 +121,7 @@ internal data class AppTabActions(
     val onFolderClick: ((collectionId: String, folderId: String) -> Unit)? = null,
     val onRequestedSettingsPageConsumed: () -> Unit = {},
     val onInitialHomeContentRendered: () -> Unit = {},
+    val onMatrixBrandClick: ((com.nuvio.app.features.matrix.MatrixBrand) -> Unit)? = null,
 )
 
 @Composable
@@ -153,32 +153,24 @@ internal fun AppTabHost(
                         continueWatchingDisintegrationRequest = state.continueWatchingDisintegrationRequest,
                         onFolderClick = actions.onFolderClick,
                         onFirstCatalogRendered = actions.onInitialHomeContentRendered,
-                        onMatrixBrandClick = { brand ->
-                            navController.navigate(MatrixBrandRoute(brandId = brand.id, title = brand.name))
-                        },
+                        onMatrixBrandClick = actions.onMatrixBrandClick,
                     )
                 }
             }
 
             AppScreenTab.Movies -> {
                 key("tab_movies") {
-                    val onBrandClick: (com.nuvio.app.features.matrix.MatrixBrand) -> Unit = { brand ->
-                        navController.navigate(MatrixBrandRoute(brandId = brand.id, title = brand.name))
-                    }
                     com.nuvio.app.features.matrix.MatrixMoviesScreen(
                         onPosterClick = actions.onPosterClick,
-                        onBrandClick = onBrandClick,
+                        onBrandClick = actions.onMatrixBrandClick,
                     )
                 }
             }
             AppScreenTab.Series -> {
                 key("tab_series") {
-                    val onBrandClick: (com.nuvio.app.features.matrix.MatrixBrand) -> Unit = { brand ->
-                        navController.navigate(MatrixBrandRoute(brandId = brand.id, title = brand.name))
-                    }
                     com.nuvio.app.features.matrix.MatrixSeriesScreen(
                         onPosterClick = actions.onPosterClick,
-                        onBrandClick = onBrandClick,
+                        onBrandClick = actions.onMatrixBrandClick,
                     )
                 }
             }

@@ -2,6 +2,13 @@ package com.nuvio.app
 
 import android.content.Intent
 import android.content.res.Configuration
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import com.nuvio.app.features.autosync.AutoSyncPreferencesAndroid
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -153,12 +160,8 @@ open class MainActivity : AppCompatActivity() {
 
         val coldStart = savedInstanceState == null
         setContent {
-            var showSplash by androidx.compose.runtime.remember {
-                androidx.compose.runtime.mutableStateOf(coldStart)
-            }
-            androidx.compose.foundation.layout.Box(
-                modifier = androidx.compose.ui.Modifier.fillMaxSize(),
-            ) {
+            var showSplash by remember { mutableStateOf(coldStart) }
+            Box(modifier = Modifier.fillMaxSize()) {
                 App()
                 if (showSplash) {
                     MatrixSplashVideo(onFinished = { showSplash = false })
