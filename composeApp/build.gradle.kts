@@ -364,7 +364,7 @@ tasks.withType<KotlinCompilationTask<*>>().configureEach {
 
 kotlin {
     android {
-        namespace = "com.matrixiptv.app"
+        namespace = "com.nuvio.app"
         compileSdk {
             version = release(libs.versions.android.compileSdk.get().toInt()) {
                 minorApiLevel = libs.versions.android.compileSdkMinor.get().toInt()
