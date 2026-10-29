@@ -4,6 +4,8 @@ import com.nuvio.app.core.ui.NativeNavigationTab
 
 enum class AppScreenTab {
     Home,
+    Movies,
+    Series,
     Search,
     Library,
     Settings,
@@ -24,9 +26,11 @@ internal fun AppScreenTab.toNativeNavigationTab(): NativeNavigationTab = when (t
     AppScreenTab.Library -> NativeNavigationTab.Library
     AppScreenTab.Settings -> NativeNavigationTab.Settings
     AppScreenTab.MyList -> NativeNavigationTab.MyList
-    // The native tab bar has a fixed tab set, so the IPTV tabs fall back to Home there.
+    // The native tab bar has a fixed tab set, so the IPTV and Matrix tabs fall back to Home there.
     AppScreenTab.Iptv -> NativeNavigationTab.Home
     AppScreenTab.LiveTv -> NativeNavigationTab.Home
+    AppScreenTab.Movies -> NativeNavigationTab.Home
+    AppScreenTab.Series -> NativeNavigationTab.Home
 }
 
 internal fun NativeNavigationTab.toAppScreenTab(): AppScreenTab = when (this) {

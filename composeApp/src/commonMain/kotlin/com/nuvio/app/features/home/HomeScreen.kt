@@ -125,6 +125,7 @@ fun HomeScreen(
     continueWatchingDisintegrationRequest: DisintegrationRequest<String>? = null,
     onFolderClick: ((collectionId: String, folderId: String) -> Unit)? = null,
     onFirstCatalogRendered: (() -> Unit)? = null,
+    onMatrixBrandClick: ((com.nuvio.app.features.matrix.MatrixBrand) -> Unit)? = null,
 ) {
     LaunchedEffect(Unit) {
         AddonRepository.initialize()
@@ -1021,6 +1022,15 @@ fun HomeScreen(
                             )
                         }
                     }
+                }
+            }
+
+            // Matrix: "استكشف حسب العلامة" brand chips row (Showflix home).
+            if (onMatrixBrandClick != null) {
+                item(key = "matrix_brand_chips", contentType = "matrix_brands") {
+                    com.nuvio.app.features.matrix.MatrixBrandChipsRow(
+                        onBrandClick = onMatrixBrandClick,
+                    )
                 }
             }
 

@@ -47,6 +47,7 @@ internal val navigationSavedStateConfiguration = SavedStateConfiguration {
             subclass(FolderDetailRoute::class, FolderDetailRoute.serializer())
             subclass(StreamRoute::class, StreamRoute.serializer())
             subclass(CatalogRoute::class, CatalogRoute.serializer())
+            subclass(MatrixBrandRoute::class, MatrixBrandRoute.serializer())
             subclass(PlayerRoute::class, PlayerRoute.serializer())
         }
     }

@@ -148,6 +148,13 @@ data class CatalogRoute(
     override val subtitle: String? = null,
 ) : AppRoute
 
+/** Matrix brand detail page (Showflix-style brand screen). */
+@Serializable
+data class MatrixBrandRoute(
+    val brandId: String,
+    override val title: String = "",
+) : AppRoute
+
 @Serializable
 data class PlayerRoute(
     val launchId: Long,

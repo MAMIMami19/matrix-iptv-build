@@ -1641,6 +1641,17 @@ internal fun MainAppContent(
                         onPosterLongClick = openPosterActions,
                     )
                 }
+                entry<MatrixBrandRoute> { route ->
+                    val brand = com.nuvio.app.features.matrix.MATRIX_BRANDS
+                        .firstOrNull { it.id == route.brandId }
+                    if (brand != null) {
+                        com.nuvio.app.features.matrix.MatrixBrandDetailScreen(
+                            brand = brand,
+                            onPosterClick = navController::openPreview,
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
+                }
                 entry<HomescreenSettingsRoute> { route ->
                     SettingsDestination(route, navController) { onBack ->
                         HomescreenSettingsScreen(onBack = onBack)

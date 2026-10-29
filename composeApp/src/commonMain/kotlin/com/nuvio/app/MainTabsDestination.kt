@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.OndemandVideo
+import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -87,25 +89,25 @@ internal fun MainTabsDestination(
                 selected = selectedTab == AppScreenTab.Home,
                 onClick = { onTabSelected(AppScreenTab.Home) },
                 icon = Icons.Filled.Home,
-                label = stringResource(Res.string.compose_nav_home),
+                label = "الرئيسية",
             ),
             FloatingNavigationItem(
-                selected = selectedTab == AppScreenTab.Search,
-                onClick = { onTabSelected(AppScreenTab.Search) },
-                drawable = Res.drawable.sidebar_search,
-                label = stringResource(Res.string.compose_nav_search),
+                selected = selectedTab == AppScreenTab.Movies,
+                onClick = { onTabSelected(AppScreenTab.Movies) },
+                icon = Icons.Filled.Movie,
+                label = "أفلام",
             ),
             FloatingNavigationItem(
-                selected = selectedTab == AppScreenTab.Library,
-                onClick = { onTabSelected(AppScreenTab.Library) },
-                drawable = Res.drawable.sidebar_library,
-                label = stringResource(Res.string.compose_nav_library),
+                selected = selectedTab == AppScreenTab.Series,
+                onClick = { onTabSelected(AppScreenTab.Series) },
+                icon = Icons.Filled.Subscriptions,
+                label = "مسلسلات",
             ),
             FloatingNavigationItem(
                 selected = selectedTab == AppScreenTab.MyList,
                 onClick = { onTabSelected(AppScreenTab.MyList) },
                 icon = Icons.Filled.Bookmark,
-                label = "My List",
+                label = "قائمتي",
             ),
             FloatingNavigationItem(
                 selected = selectedTab == AppScreenTab.Iptv,
@@ -149,25 +151,25 @@ internal fun MainTabsDestination(
                             selected = selectedTab == AppScreenTab.Home,
                             onClick = { onTabSelected(AppScreenTab.Home) },
                             icon = Icons.Filled.Home,
-                            contentDescription = stringResource(Res.string.compose_nav_home),
+                            contentDescription = "الرئيسية",
                         )
                         NavItem(
-                            selected = selectedTab == AppScreenTab.Search,
-                            onClick = { onTabSelected(AppScreenTab.Search) },
-                            icon = Res.drawable.sidebar_search,
-                            contentDescription = stringResource(Res.string.compose_nav_search),
+                            selected = selectedTab == AppScreenTab.Movies,
+                            onClick = { onTabSelected(AppScreenTab.Movies) },
+                            icon = Icons.Filled.Movie,
+                            contentDescription = "أفلام",
                         )
                         NavItem(
-                            selected = selectedTab == AppScreenTab.Library,
-                            onClick = { onTabSelected(AppScreenTab.Library) },
-                            icon = Res.drawable.sidebar_library,
-                            contentDescription = stringResource(Res.string.compose_nav_library),
+                            selected = selectedTab == AppScreenTab.Series,
+                            onClick = { onTabSelected(AppScreenTab.Series) },
+                            icon = Icons.Filled.Subscriptions,
+                            contentDescription = "مسلسلات",
                         )
                         NavItem(
                             selected = selectedTab == AppScreenTab.MyList,
                             onClick = { onTabSelected(AppScreenTab.MyList) },
                             icon = Icons.Filled.Bookmark,
-                            contentDescription = "My List",
+                            contentDescription = "قائمتي",
                         )
                         NavItem(
                             selected = selectedTab == AppScreenTab.Iptv,
