@@ -238,6 +238,16 @@ internal fun AppTabHost(
                 )
             }
 
+            AppScreenTab.Kids -> {
+                VodScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    isSelectedTab = selectedTab == AppScreenTab.Kids,
+                    onPlay = { title, streamId, url, contentType, playlist ->
+                        actions.onXtreamPlay?.invoke(title, streamId, url, contentType, playlist)
+                    },
+                )
+            }
+
             AppScreenTab.LiveTv -> {
                 LiveTvScreen(
                     modifier = Modifier.fillMaxSize(),

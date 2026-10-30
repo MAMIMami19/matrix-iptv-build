@@ -117,6 +117,12 @@ internal fun MainTabsDestination(
                 label = "قائمتي",
             ),
             FloatingNavigationItem(
+                selected = selectedTab == AppScreenTab.Kids,
+                onClick = { onTabSelected(AppScreenTab.Kids) },
+                icon = Icons.Filled.ChildCare,
+                label = "أطفال",
+            ),
+            FloatingNavigationItem(
                 selected = selectedTab == AppScreenTab.Settings,
                 onClick = { onTabSelected(AppScreenTab.Settings) },
                 label = stringResource(Res.string.compose_nav_profile),
@@ -171,6 +177,12 @@ internal fun MainTabsDestination(
                             onClick = { onTabSelected(AppScreenTab.MyList) },
                             icon = Icons.Filled.Bookmark,
                             contentDescription = "قائمتي",
+                        )
+                        NavItem(
+                            selected = selectedTab == AppScreenTab.Kids,
+                            onClick = { onTabSelected(AppScreenTab.Kids) },
+                            icon = Icons.Filled.ChildCare,
+                            contentDescription = "أطفال",
                         )
                         NavItem(
                             selected = selectedTab == AppScreenTab.Settings,
