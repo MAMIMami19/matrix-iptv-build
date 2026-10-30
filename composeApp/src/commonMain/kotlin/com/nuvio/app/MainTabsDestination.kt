@@ -117,18 +117,6 @@ internal fun MainTabsDestination(
                 label = "قائمتي",
             ),
             FloatingNavigationItem(
-                selected = selectedTab == AppScreenTab.Iptv,
-                onClick = { onTabSelected(AppScreenTab.Iptv) },
-                icon = Icons.Filled.OndemandVideo,
-                label = "IPTV",
-            ),
-            FloatingNavigationItem(
-                selected = selectedTab == AppScreenTab.LiveTv,
-                onClick = { onTabSelected(AppScreenTab.LiveTv) },
-                icon = Icons.Filled.Tv,
-                label = "Live TV",
-            ),
-            FloatingNavigationItem(
                 selected = selectedTab == AppScreenTab.Settings,
                 onClick = { onTabSelected(AppScreenTab.Settings) },
                 label = stringResource(Res.string.compose_nav_profile),
@@ -183,18 +171,6 @@ internal fun MainTabsDestination(
                             onClick = { onTabSelected(AppScreenTab.MyList) },
                             icon = Icons.Filled.Bookmark,
                             contentDescription = "قائمتي",
-                        )
-                        NavItem(
-                            selected = selectedTab == AppScreenTab.Iptv,
-                            onClick = { onTabSelected(AppScreenTab.Iptv) },
-                            icon = Icons.Filled.OndemandVideo,
-                            contentDescription = "IPTV",
-                        )
-                        NavItem(
-                            selected = selectedTab == AppScreenTab.LiveTv,
-                            onClick = { onTabSelected(AppScreenTab.LiveTv) },
-                            icon = Icons.Filled.Tv,
-                            contentDescription = "Live TV",
                         )
                         NavItem(
                             selected = selectedTab == AppScreenTab.Settings,
