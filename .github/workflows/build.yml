@@ -6,6 +6,8 @@ on:
     paths-ignore:
       - 'virtual-addon/**'
       - '.github/workflows/generate-sections.yml' 
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
