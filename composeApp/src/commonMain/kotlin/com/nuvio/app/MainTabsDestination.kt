@@ -105,22 +105,16 @@ internal fun MainTabsDestination(
                 label = "مسلسلات",
             ),
             FloatingNavigationItem(
-                selected = selectedTab == AppScreenTab.Trending,
-                onClick = { onTabSelected(AppScreenTab.Trending) },
-                icon = Icons.Filled.Whatshot,
-                label = "جديد ورائج",
+                selected = selectedTab == AppScreenTab.Iptv,
+                onClick = { onTabSelected(AppScreenTab.Iptv) },
+                icon = Icons.Filled.OndemandVideo,
+                label = "IPTV",
             ),
             FloatingNavigationItem(
                 selected = selectedTab == AppScreenTab.MyList,
                 onClick = { onTabSelected(AppScreenTab.MyList) },
                 icon = Icons.Filled.Bookmark,
                 label = "قائمتي",
-            ),
-            FloatingNavigationItem(
-                selected = selectedTab == AppScreenTab.Iptv,
-                onClick = { onTabSelected(AppScreenTab.Iptv) },
-                icon = Icons.Filled.OndemandVideo,
-                label = "IPTV",
             ),
             FloatingNavigationItem(
                 selected = selectedTab == AppScreenTab.Settings,
@@ -167,22 +161,16 @@ internal fun MainTabsDestination(
                             contentDescription = "مسلسلات",
                         )
                         NavItem(
-                            selected = selectedTab == AppScreenTab.Trending,
-                            onClick = { onTabSelected(AppScreenTab.Trending) },
-                            icon = Icons.Filled.Whatshot,
-                            contentDescription = "جديد ورائج",
+                            selected = selectedTab == AppScreenTab.Iptv,
+                            onClick = { onTabSelected(AppScreenTab.Iptv) },
+                            icon = Icons.Filled.OndemandVideo,
+                            contentDescription = "IPTV",
                         )
                         NavItem(
                             selected = selectedTab == AppScreenTab.MyList,
                             onClick = { onTabSelected(AppScreenTab.MyList) },
                             icon = Icons.Filled.Bookmark,
                             contentDescription = "قائمتي",
-                        )
-                        NavItem(
-                            selected = selectedTab == AppScreenTab.Iptv,
-                            onClick = { onTabSelected(AppScreenTab.Iptv) },
-                            icon = Icons.Filled.OndemandVideo,
-                            contentDescription = "IPTV",
                         )
                         NavItem(
                             selected = selectedTab == AppScreenTab.Settings,
