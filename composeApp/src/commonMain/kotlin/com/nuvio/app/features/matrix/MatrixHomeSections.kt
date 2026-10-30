@@ -3,9 +3,12 @@ package com.nuvio.app.features.matrix
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -14,11 +17,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.NuvioPosterCard
 import com.nuvio.app.features.home.MetaPreview
 
@@ -87,6 +93,7 @@ fun MatrixBrandChipsRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(MATRIX_BRANDS, key = { it.id }) { brand ->
+                val logoModel = brand.logoModel()
                 Surface(
                     shape = RoundedCornerShape(20.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
@@ -95,14 +102,29 @@ fun MatrixBrandChipsRow(
                         .clip(RoundedCornerShape(20.dp))
                         .clickable { onBrandClick(brand) },
                 ) {
-                    Text(
-                        text = brand.name,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface,
+                    Box(
+                        contentAlignment = Alignment.Center,
                         modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-                    )
+                    ) {
+                        if (logoModel != null) {
+                            AsyncImage(
+                                model = logoModel,
+                                contentDescription = brand.name,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier
+                                    .height(26.dp)
+                                    .widthIn(max = 110.dp),
+                            )
+                        } else {
+                            Text(
+                                text = brand.name,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
                 }
             }
         }

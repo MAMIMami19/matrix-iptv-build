@@ -42,6 +42,13 @@ private data class MatrixCatalog(
 
 private val matrixJson = Json { ignoreUnknownKeys = true }
 
+/** A catalog entry from the matrix-sections manifest, in manifest order. */
+data class MatrixCatalogInfo(
+    val id: String,
+    val name: String,
+    val type: String,
+)
+
 /**
  * Fetches the matrix-sections virtual addon (manifest + catalog JSONs) over plain
  * HTTP and exposes per-catalog poster lists. Independent from the Stremio addon
@@ -56,6 +63,10 @@ object MatrixSectionsRepository {
     private val _catalogs = MutableStateFlow<Map<String, List<MetaPreview>>>(emptyMap())
     val catalogs: StateFlow<Map<String, List<MetaPreview>>> = _catalogs.asStateFlow()
 
+    private val _orderedCatalogs = MutableStateFlow<List<MatrixCatalogInfo>>(emptyList())
+    /** Catalog ids + display names in manifest order (for home rows). */
+    val orderedCatalogs: StateFlow<List<MatrixCatalogInfo>> = _orderedCatalogs.asStateFlow()
+
     private var manifestRequested = false
 
     fun ensureLoaded() {
@@ -65,6 +76,9 @@ object MatrixSectionsRepository {
             try {
                 val manifestText = httpGetText("$BASE_URL/manifest.json")
                 val manifest = matrixJson.decodeFromString<MatrixManifest>(manifestText)
+                _orderedCatalogs.value = manifest.catalogs.map { entry ->
+                    MatrixCatalogInfo(id = entry.id, name = entry.name, type = entry.type)
+                }
                 for (entry in manifest.catalogs) {
                     launch {
                         try {

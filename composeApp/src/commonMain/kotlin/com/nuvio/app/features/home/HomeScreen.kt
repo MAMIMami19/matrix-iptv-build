@@ -130,6 +130,7 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
         AddonRepository.initialize()
         CollectionRepository.initialize()
+        com.nuvio.app.features.matrix.MatrixSectionsRepository.ensureLoaded()
         ContinueWatchingPreferencesRepository.ensureLoaded()
         WatchedRepository.ensureLoaded()
         WatchProgressRepository.ensureLoaded()
@@ -140,6 +141,8 @@ fun HomeScreen(
     }
 
     val addonsUiState by AddonRepository.uiState.collectAsStateWithLifecycle()
+    val matrixCatalogs by com.nuvio.app.features.matrix.MatrixSectionsRepository.catalogs.collectAsStateWithLifecycle()
+    val matrixOrderedCatalogs by com.nuvio.app.features.matrix.MatrixSectionsRepository.orderedCatalogs.collectAsStateWithLifecycle()
     val homeUiState by HomeRepository.uiState.collectAsStateWithLifecycle()
     val homeSettingsUiState by remember {
         HomeCatalogSettingsRepository.snapshot()
@@ -1032,6 +1035,26 @@ fun HomeScreen(
                         onBrandClick = onMatrixBrandClick,
                     )
                 }
+            }
+
+            // Matrix: Showflix-style catalog rows from matrix-sections, in manifest
+            // order. Rendered regardless of addon state (outside the empty-state
+            // branch below), so the home is never empty.
+            val matrixSectionsToShow = matrixOrderedCatalogs.mapNotNull { info ->
+                val sectionItems = matrixCatalogs[info.id].orEmpty()
+                if (sectionItems.isNotEmpty()) info to sectionItems else null
+            }
+            items(
+                matrixSectionsToShow,
+                key = { (info, _) -> "matrix_section_${info.id}" },
+                contentType = { "matrix_section" },
+            ) { (info, sectionItems) ->
+                com.nuvio.app.features.matrix.MatrixSectionRow(
+                    title = info.name,
+                    items = sectionItems,
+                    onPosterClick = onPosterClick,
+                    ranked = info.id.contains("top10"),
+                )
             }
 
             when {
