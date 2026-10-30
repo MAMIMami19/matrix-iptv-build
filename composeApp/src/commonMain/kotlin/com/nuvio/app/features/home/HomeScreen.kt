@@ -127,6 +127,7 @@ fun HomeScreen(
     onFolderClick: ((collectionId: String, folderId: String) -> Unit)? = null,
     onFirstCatalogRendered: (() -> Unit)? = null,
     onMatrixBrandClick: ((com.nuvio.app.features.matrix.MatrixBrand) -> Unit)? = null,
+    onTopFilterClick: ((String) -> Unit)? = null,
 ) {
     LaunchedEffect(Unit) {
         AddonRepository.initialize()
@@ -1029,6 +1030,36 @@ fun HomeScreen(
                 }
             }
 
+            // Matrix: Top filter chips (Showflix style): مباشر / IPTV / جديد ورائج.
+            if (onTopFilterClick != null) {
+                item(key = "matrix_top_filters", contentType = "matrix_filters") {
+                    androidx.compose.foundation.layout.Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(
+                            12.dp,
+                            androidx.compose.ui.Alignment.CenterHorizontally
+                        ),
+                    ) {
+                        for (label in listOf("مباشر", "IPTV", "جديد ورائج")) {
+                            androidx.compose.material3.Surface(
+                                onClick = { onTopFilterClick(label) },
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+                            ) {
+                                androidx.compose.material3.Text(
+                                    text = label,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // Matrix: "استكشف حسب العلامة" brand chips row (Showflix home).
             if (onMatrixBrandClick != null) {
                 item(key = "matrix_brand_chips", contentType = "matrix_brands") {
@@ -1036,26 +1067,6 @@ fun HomeScreen(
                         onBrandClick = onMatrixBrandClick,
                     )
                 }
-            }
-
-            // Matrix: Showflix-style catalog rows from matrix-sections, in manifest
-            // order. Rendered regardless of addon state (outside the empty-state
-            // branch below), so the home is never empty.
-            val matrixSectionsToShow = matrixOrderedCatalogs.mapNotNull { info ->
-                val sectionItems = matrixCatalogs[info.id].orEmpty()
-                if (sectionItems.isNotEmpty()) info to sectionItems else null
-            }
-            items(
-                matrixSectionsToShow,
-                key = { (info, _) -> "matrix_section_${info.id}" },
-                contentType = { "matrix_section" },
-            ) { (info, sectionItems) ->
-                com.nuvio.app.features.matrix.MatrixSectionRow(
-                    title = info.name,
-                    items = sectionItems,
-                    onPosterClick = onPosterClick,
-                    ranked = info.id.contains("top10"),
-                )
             }
 
             when {
@@ -1229,6 +1240,25 @@ fun HomeScreen(
                         }
                     }
                 }
+            }
+
+            // Matrix: Showflix-style catalog rows from matrix-sections, in manifest
+            // order. Placed AFTER Continue Watching (user order).
+            val matrixSectionsToShow = matrixOrderedCatalogs.mapNotNull { info ->
+                val sectionItems = matrixCatalogs[info.id].orEmpty()
+                if (sectionItems.isNotEmpty()) info to sectionItems else null
+            }
+            items(
+                matrixSectionsToShow,
+                key = { (info, _) -> "matrix_section_${info.id}" },
+                contentType = { "matrix_section" },
+            ) { (info, sectionItems) ->
+                com.nuvio.app.features.matrix.MatrixSectionRow(
+                    title = info.name,
+                    items = sectionItems,
+                    onPosterClick = onPosterClick,
+                    ranked = info.id.contains("top10"),
+                )
             }
         }
     }
