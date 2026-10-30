@@ -117,10 +117,10 @@ internal fun MainTabsDestination(
                 label = "قائمتي",
             ),
             FloatingNavigationItem(
-                selected = selectedTab == AppScreenTab.Kids,
-                onClick = { onTabSelected(AppScreenTab.Kids) },
-                icon = Icons.Filled.ChildCare,
-                label = "أطفال",
+                selected = selectedTab == AppScreenTab.Iptv,
+                onClick = { onTabSelected(AppScreenTab.Iptv) },
+                icon = Icons.Filled.OndemandVideo,
+                label = "IPTV",
             ),
             FloatingNavigationItem(
                 selected = selectedTab == AppScreenTab.Settings,
@@ -179,10 +179,10 @@ internal fun MainTabsDestination(
                             contentDescription = "قائمتي",
                         )
                         NavItem(
-                            selected = selectedTab == AppScreenTab.Kids,
-                            onClick = { onTabSelected(AppScreenTab.Kids) },
-                            icon = Icons.Filled.ChildCare,
-                            contentDescription = "أطفال",
+                            selected = selectedTab == AppScreenTab.Iptv,
+                            onClick = { onTabSelected(AppScreenTab.Iptv) },
+                            icon = Icons.Filled.OndemandVideo,
+                            contentDescription = "IPTV",
                         )
                         NavItem(
                             selected = selectedTab == AppScreenTab.Settings,
