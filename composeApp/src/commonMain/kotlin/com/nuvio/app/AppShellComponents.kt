@@ -123,6 +123,7 @@ internal data class AppTabActions(
     val onRequestedSettingsPageConsumed: () -> Unit = {},
     val onInitialHomeContentRendered: () -> Unit = {},
     val onMatrixBrandClick: ((com.nuvio.app.features.matrix.MatrixBrand) -> Unit)? = null,
+    val onTabSelected: ((AppScreenTab) -> Unit)? = null,
 )
 
 @Composable
@@ -155,6 +156,13 @@ internal fun AppTabHost(
                         onFolderClick = actions.onFolderClick,
                         onFirstCatalogRendered = actions.onInitialHomeContentRendered,
                         onMatrixBrandClick = actions.onMatrixBrandClick,
+                        onTopFilterClick = { label ->
+                            when (label) {
+                                "مباشر" -> actions.onTabSelected?.invoke(AppScreenTab.LiveTv)
+                                "IPTV" -> actions.onTabSelected?.invoke(AppScreenTab.Iptv)
+                                "جديد ورائج" -> actions.onTabSelected?.invoke(AppScreenTab.Trending)
+                            }
+                        },
                     )
                 }
             }

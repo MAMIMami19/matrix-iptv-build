@@ -1412,6 +1412,7 @@ internal fun MainAppContent(
                                         MatrixBrandRoute(brandId = brand.id, title = brand.name),
                                     )
                                 },
+                                onTabSelected = ::handleRootTabClick,
                                 onLibraryPosterLongClick = { item, section ->
                                     openPosterActions(
                                         PosterActionTarget(
