@@ -11,6 +11,7 @@ enum class AppScreenTab {
     Library,
     Settings,
     MyList,
+    Music,
     Iptv,
     LiveTv,
     ;
@@ -28,6 +29,7 @@ internal fun AppScreenTab.toNativeNavigationTab(): NativeNavigationTab = when (t
     AppScreenTab.Settings -> NativeNavigationTab.Settings
     AppScreenTab.MyList -> NativeNavigationTab.MyList
     // The native tab bar has a fixed tab set, so the IPTV and Matrix tabs fall back to Home there.
+    AppScreenTab.Music -> NativeNavigationTab.Home
     AppScreenTab.Iptv -> NativeNavigationTab.Home
     AppScreenTab.LiveTv -> NativeNavigationTab.Home
     AppScreenTab.Movies -> NativeNavigationTab.Home
