@@ -1,0 +1,44 @@
+name: Build Matrix APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Matrix IPTV APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Configure signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.MATRIX_KEYSTORE_BASE64 }}
+          LOCAL_PROPERTIES_BASE64: ${{ secrets.MATRIX_LOCAL_PROPERTIES_BASE64 }}
+        run: |
+          keystore_path="${RUNNER_TEMP}/matrix-release.keystore"
+          printf '%s' "${KEYSTORE_BASE64}" | base64 --decode > "${keystore_path}"
+          printf '%s' "${LOCAL_PROPERTIES_BASE64}" | base64 --decode > local.properties
+          sed -i -E '/^[[:space:]]*(sdk\.dir|NUVIO_RELEASE_STORE_FILE)[[:space:]]*=/d' local.properties
+          printf '\nNUVIO_RELEASE_STORE_FILE=%s\n' "${keystore_path}" >> local.properties
+
+      - name: Build full release APKs
+        run: ./gradlew :androidApp:assembleFullRelease --stacktrace
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: Matrix-IPTV-2.2
+          path: androidApp/build/outputs/apk/full/release/*.apk
+          if-no-files-found: error

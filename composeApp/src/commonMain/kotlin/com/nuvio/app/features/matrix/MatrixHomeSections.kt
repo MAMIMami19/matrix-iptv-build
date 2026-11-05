@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -20,18 +21,33 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.NuvioPosterCard
 import com.nuvio.app.features.home.MetaPreview
+import kotlin.math.abs
+import kotlin.math.min
 
 /**
  * A Showflix-style horizontal poster row: Arabic section title + posters.
  * When [ranked] is true, posters render with big outlined rank numerals
  * (Top-10 style, supported by NuvioPosterCard).
+ *
+ * Posters render as a 3D cover-flow carousel: the poster nearest the
+ * viewport center is large and front-facing, while neighbours angle away
+ * in 3D (rotationY), shrink, fade slightly, and dip down a touch, like a
+ * cylindrical carousel. The transform is purely visual (graphicsLayer), so
+ * tap-to-open-details and DPAD left/right focus keep working exactly as
+ * before. Live TV / IPTV channel rows do not use this composable, so they
+ * are unaffected.
  */
 @Composable
 fun MatrixSectionRow(
@@ -42,6 +58,9 @@ fun MatrixSectionRow(
     ranked: Boolean = false,
 ) {
     if (items.isEmpty()) return
+    val listState = rememberLazyListState()
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
     Column(modifier = modifier.padding(bottom = 20.dp)) {
         Text(
             text = title,
@@ -53,21 +72,65 @@ fun MatrixSectionRow(
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
         )
         LazyRow(
+            state = listState,
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             itemsIndexed(items, key = { _, item -> "${item.type}:${item.id}" }) { index, item ->
-                NuvioPosterCard(
-                    title = item.name,
-                    imageUrl = item.poster,
-                    detailLine = item.releaseInfo,
-                    rankNumber = if (ranked) index + 1 else null,
-                    onClick = onPosterClick?.let { { it(item) } },
-                )
+                // Distance of this item's center from the viewport center,
+                // normalized to roughly [-1, 1] (0 = centered). Computed from
+                // the live layout info so it updates smoothly while scrolling.
+                // Layout offsets are measured from the layout-start edge, so
+                // flip the sign under RTL to keep the visual lean consistent.
+                val layoutInfo = listState.layoutInfo
+                val viewportSize =
+                    (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset).coerceAtLeast(1)
+                val viewportCenter =
+                    (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2f
+                val itemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+                val visualOffset = if (itemInfo != null) {
+                    val itemCenter = itemInfo.offset + itemInfo.size / 2f
+                    val normalized = (itemCenter - viewportCenter) / viewportSize * 2f
+                    val directionSign =
+                        if (layoutDirection == LayoutDirection.Ltr) 1f else -1f
+                    (normalized * directionSign).coerceIn(-1.5f, 1.5f)
+                } else {
+                    0f
+                }
+                val distance = min(abs(visualOffset), 1f)
+                Box(
+                    modifier = Modifier.graphicsLayer {
+                        // Outer edge recedes: right-of-center leans right/back,
+                        // left-of-center leans left/back.
+                        rotationY = visualOffset * CoverFlowMaxRotationY
+                        val scale = 1f - distance * CoverFlowScaleDrop
+                        scaleX = scale
+                        scaleY = scale
+                        alpha = 1f - distance * CoverFlowAlphaDrop
+                        // Gentle cylindrical dip for off-center posters.
+                        translationY = distance * CoverFlowDipDp * density.density
+                        cameraDistance = CoverFlowCameraDistance * density.density
+                        transformOrigin = TransformOrigin.Center
+                    },
+                ) {
+                    NuvioPosterCard(
+                        title = item.name,
+                        imageUrl = item.poster,
+                        detailLine = item.releaseInfo,
+                        rankNumber = if (ranked) index + 1 else null,
+                        onClick = onPosterClick?.let { { it(item) } },
+                    )
+                }
             }
         }
     }
 }
+
+private const val CoverFlowMaxRotationY = 45f
+private const val CoverFlowScaleDrop = 0.15f
+private const val CoverFlowAlphaDrop = 0.25f
+private const val CoverFlowDipDp = 6f
+private const val CoverFlowCameraDistance = 12f
 
 /**
  * The "استكشف حسب العلامة" (explore by brand) chips row from the Showflix home.
