@@ -71,6 +71,7 @@ import com.nuvio.app.core.ui.NuvioShelfSection
 import com.nuvio.app.core.ui.NuvioViewAllPillSize
 import com.nuvio.app.core.ui.ScopedDisintegrationTracker
 import com.nuvio.app.core.ui.SkeletonBlock
+import com.nuvio.app.core.ui.rememberTvInitialFocus
 import com.nuvio.app.core.ui.nuvioConsumePointerEvents
 import com.nuvio.app.core.ui.shimmer
 import com.nuvio.app.features.cloud.CloudLibraryFile
@@ -275,6 +276,8 @@ fun LibraryScreen(
     }
 
     val disintegration = remember { LibraryDisintegrationHolder() }
+    // TV remote (DPAD): focus the sort chip when this tab becomes active.
+    val libraryInitialFocus = rememberTvInitialFocus()
     val librarySectionsDisplay = if (
         sourceMode == LibraryViewMode.Saved &&
         displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL &&
@@ -494,6 +497,7 @@ fun LibraryScreen(
                                 onSortSelected = LibraryDisplaySettingsRepository::setSortOption,
                                 modifier = libraryContentTransitionModifier()
                                     .padding(horizontal = 16.dp),
+                                firstControlFocusRequester = libraryInitialFocus,
                             )
                         }
                         when (displaySettings.layoutMode) {

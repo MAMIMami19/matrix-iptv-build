@@ -39,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -55,6 +56,7 @@ import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.NuvioSectionLabel
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.nuvioConsumePointerEvents
+import com.nuvio.app.core.ui.tvFocusRing
 import com.nuvio.app.features.home.HomeCatalogSettingsItem
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.settings_homescreen_collection_with_addon
@@ -240,6 +242,11 @@ internal fun SettingsNavigationRow(
     isTablet: Boolean,
     trailingContent: (@Composable RowScope.() -> Unit)? = null,
     onClick: () -> Unit,
+    /**
+     * TV remote (DPAD) entry point: when set, this row requests focus
+     * (pass it only for the first row of the settings root page).
+     */
+    focusRequester: androidx.compose.ui.focus.FocusRequester? = null,
 ) {
     val tokens = MaterialTheme.nuvio
     val iconSize = if (isTablet) 42.dp else 36.dp
@@ -250,6 +257,14 @@ internal fun SettingsNavigationRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = enabled, onClick = onClick)
+            .then(
+                if (focusRequester != null) {
+                    Modifier.focusRequester(focusRequester)
+                } else {
+                    Modifier
+                },
+            )
+            .tvFocusRing(cornerRadius = 12.dp)
             .padding(horizontal = horizontalPadding, vertical = verticalPadding)
             .alpha(if (enabled) NuvioTokens.Opacity.visible else tokens.opacity.medium),
         horizontalArrangement = Arrangement.Start,
@@ -330,6 +345,7 @@ internal fun SettingsSwitchRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = enabled) { onCheckedChange(!checked) }
+            .tvFocusRing(cornerRadius = 12.dp)
             .padding(horizontal = horizontalPadding, vertical = verticalPadding),
         horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically,

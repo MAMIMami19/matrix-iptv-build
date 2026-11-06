@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,10 +39,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.nuvio.app.core.ui.rememberTvInitialFocus
+import com.nuvio.app.core.ui.tvFocusRing
 import coil3.compose.AsyncImage
 import com.nuvio.app.features.profiles.PinEntryDialog
 import com.nuvio.app.features.profiles.PinVerifyResult
@@ -124,8 +128,20 @@ private fun IptvPosterCard(
     title: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    focusRequester: androidx.compose.ui.focus.FocusRequester? = null,
 ) {
-    Column(modifier = modifier.clickable(onClick = onClick)) {
+    Column(
+        modifier = modifier
+            .clickable(onClick = onClick)
+            .then(
+                if (focusRequester != null) {
+                    Modifier.focusRequester(focusRequester)
+                } else {
+                    Modifier
+                },
+            )
+            .tvFocusRing(cornerRadius = 8.dp),
+    ) {
         Box(
             modifier = Modifier.fillMaxWidth().height(170.dp)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
@@ -167,6 +183,7 @@ private fun IptvChannelRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+            .tvFocusRing(cornerRadius = 8.dp)
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -217,12 +234,24 @@ private fun IptvChannelRow(
 }
 
 @Composable
-private fun IptvChip(label: String, onClick: () -> Unit) {
+private fun IptvChip(
+    label: String,
+    onClick: () -> Unit,
+    focusRequester: androidx.compose.ui.focus.FocusRequester? = null,
+) {
     Box(
         modifier = Modifier.padding(end = 8.dp)
             .clip(RoundedCornerShape(50))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick)
+            .then(
+                if (focusRequester != null) {
+                    Modifier.focusRequester(focusRequester)
+                } else {
+                    Modifier
+                },
+            )
+            .tvFocusRing(cornerRadius = 50.dp)
             .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Text(
@@ -247,6 +276,8 @@ internal fun LiveTvScreen(
     val clearOnClose by IptvSettingsRepository.clearHistoryOnClose.collectAsState()
     val needsPin = pin.isNotEmpty() && !sessionUnlocked
     val adultHidden = lockAdult && !sessionUnlocked
+    // TV remote (DPAD): focus the first group chip when this tab becomes active.
+    val initialFocus = rememberTvInitialFocus()
     var wasSelected by remember { mutableStateOf(isSelectedTab) }
 
     // Clear-on-close: when the tab loses selection, wipe this session's IPTV
@@ -517,10 +548,12 @@ internal fun LiveTvScreen(
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     LazyRow {
-                                        items(list, key = { it.categoryId }) { category ->
-                                            IptvChip(label = category.categoryName) {
-                                                selectGroup(category)
-                                            }
+                                        itemsIndexed(list, key = { _, it -> it.categoryId }) { chipIndex, category ->
+                                            IptvChip(
+                                                label = category.categoryName,
+                                                onClick = { selectGroup(category) },
+                                                focusRequester = if (chipIndex == 0) initialFocus else null,
+                                            )
                                         }
                                     }
                                     Spacer(modifier = Modifier.height(16.dp))
@@ -534,6 +567,7 @@ internal fun LiveTvScreen(
                                     Row(
                                         modifier = Modifier.fillMaxWidth()
                                             .clickable { selectGroup(category) }
+                                            .tvFocusRing(cornerRadius = 8.dp)
                                             .padding(vertical = 12.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
@@ -660,6 +694,11 @@ private fun VodSectionShelf(
     onOpenCategory: () -> Unit,
     onPlayMovie: (XtreamVodStream, List<XtreamVodStream>) -> Unit,
     onOpenSeries: (XtreamSeries) -> Unit,
+    /**
+     * TV remote (DPAD) entry point: when set, the first poster of this shelf
+     * requests focus (pass it only for the first shelf of the tab).
+     */
+    firstItemFocusRequester: androidx.compose.ui.focus.FocusRequester? = null,
 ) {
     LaunchedEffect(category.categoryId, vodType) { onLoad() }
     val shownMovies = if (vodType == VodType.Movies) movies.orEmpty().take(20) else emptyList()
@@ -701,21 +740,23 @@ private fun VodSectionShelf(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     if (vodType == VodType.Movies) {
-                        items(shownMovies, key = { it.streamId }) { movie ->
+                        itemsIndexed(shownMovies, key = { _, it -> it.streamId }) { posterIndex, movie ->
                             IptvPosterCard(
                                 imageUrl = movie.streamIcon,
                                 title = movie.name,
                                 onClick = { onPlayMovie(movie, movies.orEmpty()) },
                                 modifier = Modifier.width(120.dp),
+                                focusRequester = if (posterIndex == 0) firstItemFocusRequester else null,
                             )
                         }
                     } else {
-                        items(shownSeries, key = { it.seriesId }) { series ->
+                        itemsIndexed(shownSeries, key = { _, it -> it.seriesId }) { posterIndex, series ->
                             IptvPosterCard(
                                 imageUrl = series.cover,
                                 title = series.name,
                                 onClick = { onOpenSeries(series) },
                                 modifier = Modifier.width(120.dp),
+                                focusRequester = if (posterIndex == 0) firstItemFocusRequester else null,
                             )
                         }
                     }
@@ -738,6 +779,9 @@ internal fun VodScreen(
     val clearOnClose by IptvSettingsRepository.clearHistoryOnClose.collectAsState()
     val needsPin = pin.isNotEmpty() && !sessionUnlocked
     val adultHidden = lockAdult && !sessionUnlocked
+    // TV remote (DPAD): focus the first poster of the first shelf when this
+    // tab becomes active.
+    val initialFocus = rememberTvInitialFocus()
     var wasSelected by remember { mutableStateOf(isSelectedTab) }
 
     LaunchedEffect(isSelectedTab, clearOnClose) {
@@ -1160,7 +1204,7 @@ internal fun VodScreen(
                             }
                         } else {
                             LazyColumn(modifier = Modifier.weight(1f)) {
-                                items(list, key = { it.categoryId }) { category ->
+                                itemsIndexed(list, key = { _, it -> it.categoryId }) { shelfIndex, category ->
                                     VodSectionShelf(
                                         category = category,
                                         vodType = vodType,
@@ -1171,6 +1215,7 @@ internal fun VodScreen(
                                         onOpenCategory = { openCategory(category) },
                                         onPlayMovie = { movie, playlist -> playMovie(movie, playlist) },
                                         onOpenSeries = ::openSeries,
+                                        firstItemFocusRequester = if (shelfIndex == 0) initialFocus else null,
                                     )
                                 }
                             }

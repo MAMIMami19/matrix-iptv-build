@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.NuvioPosterCard
+import com.nuvio.app.core.ui.tvFocusRing
 import com.nuvio.app.features.home.MetaPreview
 import kotlin.math.abs
 import kotlin.math.min
@@ -56,6 +58,11 @@ fun MatrixSectionRow(
     onPosterClick: ((MetaPreview) -> Unit)?,
     modifier: Modifier = Modifier,
     ranked: Boolean = false,
+    /**
+     * TV remote (DPAD) entry point: when set, the first poster of this row
+     * requests focus (pass it only for the first row of a tab).
+     */
+    firstItemFocusRequester: androidx.compose.ui.focus.FocusRequester? = null,
 ) {
     if (items.isEmpty()) return
     val listState = rememberLazyListState()
@@ -119,6 +126,7 @@ fun MatrixSectionRow(
                         detailLine = item.releaseInfo,
                         rankNumber = if (ranked) index + 1 else null,
                         onClick = onPosterClick?.let { { it(item) } },
+                        focusRequester = if (index == 0) firstItemFocusRequester else null,
                     )
                 }
             }
@@ -140,6 +148,10 @@ private const val CoverFlowCameraDistance = 12f
 fun MatrixBrandChipsRow(
     onBrandClick: (MatrixBrand) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * TV remote (DPAD) entry point: when set, the first chip requests focus.
+     */
+    firstChipFocusRequester: androidx.compose.ui.focus.FocusRequester? = null,
 ) {
     Column(modifier = modifier.padding(bottom = 20.dp)) {
         Text(
@@ -163,7 +175,15 @@ fun MatrixBrandChipsRow(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .clickable { onBrandClick(brand) },
+                        .clickable { onBrandClick(brand) }
+                        .then(
+                            if (brand == MATRIX_BRANDS.firstOrNull() && firstChipFocusRequester != null) {
+                                Modifier.focusRequester(firstChipFocusRequester)
+                            } else {
+                                Modifier
+                            },
+                        )
+                        .tvFocusRing(cornerRadius = 20.dp),
                 ) {
                     Box(
                         contentAlignment = Alignment.Center,

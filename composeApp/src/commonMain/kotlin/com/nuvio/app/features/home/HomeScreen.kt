@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -35,6 +36,8 @@ import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
 import com.nuvio.app.core.ui.nuvioSafeBottomPadding
 import com.nuvio.app.core.ui.rememberHeroStretchState
 import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
+import com.nuvio.app.core.ui.rememberTvInitialFocus
+import com.nuvio.app.core.ui.tvFocusRing
 import com.nuvio.app.core.ui.withDuplicateSafeLazyKeys
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.addons.enabledAddons
@@ -154,6 +157,9 @@ fun HomeScreen(
     val homeListState = rememberLazyListState()
     val continueWatchingListState = rememberLazyListState()
     val upcomingListState = rememberLazyListState()
+    // TV remote (DPAD): focus the first top-filter chip when the Home tab
+    // becomes active. Without an initial focus, DPAD keys are ignored.
+    val firstChipFocusRequester = rememberTvInitialFocus()
     ScreenActivityEffect(homeListState, continueWatchingListState, upcomingListState) { active ->
         if (!active) {
             homeListState.stopScroll(MutatePriority.PreventUserInput)
@@ -1043,11 +1049,20 @@ fun HomeScreen(
                             androidx.compose.ui.Alignment.CenterHorizontally
                         ),
                     ) {
-                        for (label in listOf("مباشر", "IPTV", "جديد ورائج")) {
+                        for ((chipIndex, label) in listOf("مباشر", "IPTV", "جديد ورائج").withIndex()) {
                             androidx.compose.material3.Surface(
                                 onClick = { onTopFilterClick(label) },
                                 shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
                                 color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier
+                                    .then(
+                                        if (chipIndex == 0) {
+                                            Modifier.focusRequester(firstChipFocusRequester)
+                                        } else {
+                                            Modifier
+                                        },
+                                    )
+                                    .tvFocusRing(cornerRadius = 24.dp),
                             ) {
                                 androidx.compose.material3.Text(
                                     text = label,

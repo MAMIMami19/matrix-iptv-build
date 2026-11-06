@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.nuvio.app.core.ui.rememberTvInitialFocus
 import com.nuvio.app.features.home.MetaPreview
 
 private data class MatrixBrowseSection(
@@ -52,6 +53,9 @@ private fun MatrixBrowseScreen(
     val catalogs by MatrixSectionsRepository.catalogs.collectAsState()
     val profileState by com.nuvio.app.features.profiles.ProfileRepository.state.collectAsStateWithLifecycle()
     val activeProfile = profileState.activeProfile
+    // TV remote (DPAD): focus the first interactive element when this tab
+    // becomes active (first brand chip, else first poster of the first row).
+    val initialFocus = rememberTvInitialFocus()
 
     val visibleSections = remember(catalogs, activeProfile) {
         val base = sections.mapNotNull { section ->
@@ -93,6 +97,7 @@ private fun MatrixBrowseScreen(
                 MatrixBrandChipsRow(
                     onBrandClick = onBrandClick,
                     modifier = Modifier.padding(top = 12.dp),
+                    firstChipFocusRequester = initialFocus,
                 )
             }
         }
@@ -102,6 +107,11 @@ private fun MatrixBrowseScreen(
                 items = items,
                 ranked = section.ranked,
                 onPosterClick = onPosterClick,
+                firstItemFocusRequester = if (!showBrandChips && section == visibleSections.firstOrNull()?.first) {
+                    initialFocus
+                } else {
+                    null
+                },
             )
         }
     }

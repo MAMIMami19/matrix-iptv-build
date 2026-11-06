@@ -44,6 +44,10 @@ internal fun LibrarySavedControls(
     onTypeSelected: (String?) -> Unit,
     onSortSelected: (LibrarySortOption) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * TV remote (DPAD) entry point: when set, the sort chip requests focus.
+     */
+    firstControlFocusRequester: androidx.compose.ui.focus.FocusRequester? = null,
 ) {
     val sortOptions = availableLibrarySortOptions(sourceMode)
     val allTypesLabel = stringResource(Res.string.library_filter_all_types)
@@ -101,6 +105,7 @@ internal fun LibrarySavedControls(
                     .firstOrNull { it.name == option.key }
                     ?.let(onSortSelected)
             },
+            focusRequester = firstControlFocusRequester,
         )
     }
 }

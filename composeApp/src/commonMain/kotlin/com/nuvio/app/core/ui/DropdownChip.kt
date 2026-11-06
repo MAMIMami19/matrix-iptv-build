@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.launch
 
@@ -47,6 +48,10 @@ fun NuvioDropdownChip(
     enabled: Boolean = true,
     onSelected: (NuvioDropdownOption) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * TV remote (DPAD) entry point: when set, this chip requests focus.
+     */
+    focusRequester: androidx.compose.ui.focus.FocusRequester? = null,
 ) {
     val tokens = MaterialTheme.nuvio
     var isSheetVisible by remember { mutableStateOf(false) }
@@ -64,6 +69,14 @@ fun NuvioDropdownChip(
                     Modifier
                 },
             )
+            .then(
+                if (focusRequester != null) {
+                    Modifier.focusRequester(focusRequester)
+                } else {
+                    Modifier
+                },
+            )
+            .tvFocusRing(cornerRadius = 12.dp)
             .padding(horizontal = NuvioTokens.Space.s12, vertical = tokens.components.chipVerticalPadding),
         horizontalArrangement = Arrangement.spacedBy(NuvioTokens.Space.s6),
         verticalAlignment = Alignment.CenterVertically,

@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeJoin
@@ -159,6 +160,11 @@ fun NuvioPosterCard(
      * by it, matching the reference Top-10 design. Null = regular poster card.
      */
     rankNumber: Int? = null,
+    /**
+     * TV remote (DPAD) entry point: when set, this card requests focus
+     * (used for the first poster of the first row of a tab).
+     */
+    focusRequester: androidx.compose.ui.focus.FocusRequester? = null,
 ) {
     val posterCardStyle = rememberPosterCardStyleUiState()
     val tokens = MaterialTheme.nuvio
@@ -186,7 +192,15 @@ fun NuvioPosterCard(
                     onLongClick = onLongClick,
                     zoomImageUrl = imageUrl,
                     zoomCornerRadius = posterCardStyle.cornerRadiusDp.dp,
-                ),
+                )
+                .then(
+                    if (focusRequester != null) {
+                        Modifier.focusRequester(focusRequester)
+                    } else {
+                        Modifier
+                    },
+                )
+                .tvFocusRing(cornerRadius = posterCardStyle.cornerRadiusDp.dp),
             contentAlignment = Alignment.Center,
         ) {
             if (imageUrl != null) {

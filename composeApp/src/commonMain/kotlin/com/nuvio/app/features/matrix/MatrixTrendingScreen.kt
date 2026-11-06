@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -32,11 +33,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.nuvio.app.core.ui.rememberTvInitialFocus
+import com.nuvio.app.core.ui.tvFocusRing
 import com.nuvio.app.features.home.MetaPreview
 
 private enum class TrendingContentFilter(val label: String) {
@@ -64,6 +68,8 @@ fun MatrixTrendingScreen(
 ) {
     LaunchedEffect(Unit) { MatrixSectionsRepository.ensureLoaded() }
     val catalogs by MatrixSectionsRepository.catalogs.collectAsState()
+    // TV remote (DPAD): focus the first filter chip when this tab becomes active.
+    val initialFocus = rememberTvInitialFocus()
 
     var contentFilter by remember { mutableStateOf(TrendingContentFilter.NEW_THIS_WEEK) }
     var typeFilter by remember { mutableStateOf(TrendingTypeFilter.ALL) }
@@ -102,11 +108,14 @@ fun MatrixTrendingScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(bottom = 8.dp),
         ) {
-            items(TrendingContentFilter.entries) { filter ->
+            itemsIndexed(TrendingContentFilter.entries) { index, filter ->
                 FilterChip(
                     selected = contentFilter == filter,
                     onClick = { contentFilter = filter },
                     label = { Text(filter.label) },
+                    modifier = Modifier
+                        .then(if (index == 0) Modifier.focusRequester(initialFocus) else Modifier)
+                        .tvFocusRing(cornerRadius = 16.dp),
                 )
             }
         }
@@ -122,6 +131,7 @@ fun MatrixTrendingScreen(
                     selected = typeFilter == filter,
                     onClick = { typeFilter = filter },
                     label = { Text(filter.label) },
+                    modifier = Modifier.tvFocusRing(cornerRadius = 16.dp),
                 )
             }
         }
@@ -164,7 +174,7 @@ private fun MatrixTrendingCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
         ),
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().tvFocusRing(cornerRadius = 16.dp),
         onClick = onDetailsClick ?: {},
     ) {
         Column {

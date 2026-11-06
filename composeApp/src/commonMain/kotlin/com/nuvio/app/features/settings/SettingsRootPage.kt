@@ -90,7 +90,19 @@ internal fun LazyListScope.settingsRootContent(
     showAboutSection: Boolean = true,
     showAdvancedSection: Boolean = true,
     showSupportersContributorsPage: Boolean = true,
+    /**
+     * TV remote (DPAD) entry point: handed to the first navigation row that
+     * is actually rendered, so the Settings tab gets initial focus.
+     */
+    firstRowFocusRequester: androidx.compose.ui.focus.FocusRequester? = null,
 ) {
+    // Only the first rendered row takes the requester; later rows get null.
+    var firstRowRequesterTaken = false
+    fun takeFirstRowRequester(): androidx.compose.ui.focus.FocusRequester? {
+        if (firstRowRequesterTaken) return null
+        firstRowRequesterTaken = true
+        return firstRowFocusRequester
+    }
     if (showAccountSection) {
         item {
             SettingsSection(
@@ -105,6 +117,7 @@ internal fun LazyListScope.settingsRootContent(
                             icon = Icons.Rounded.People,
                             isTablet = isTablet,
                             onClick = onSwitchProfileClick,
+                            focusRequester = takeFirstRowRequester(),
                         )
                         SettingsGroupDivider(isTablet = isTablet)
                     }
@@ -114,6 +127,7 @@ internal fun LazyListScope.settingsRootContent(
                         icon = Icons.Rounded.AccountCircle,
                         isTablet = isTablet,
                         onClick = onAccountClick,
+                        focusRequester = takeFirstRowRequester(),
                     )
                     if (onWatchPartyClick != null) {
                         SettingsGroupDivider(isTablet = isTablet)
@@ -150,6 +164,7 @@ internal fun LazyListScope.settingsRootContent(
                         icon = Icons.Rounded.Palette,
                         isTablet = isTablet,
                         onClick = onAppearanceClick,
+                        focusRequester = takeFirstRowRequester(),
                     )
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
@@ -202,6 +217,7 @@ internal fun LazyListScope.settingsRootContent(
                             icon = Icons.Rounded.Favorite,
                             isTablet = isTablet,
                             onClick = onSupportersContributorsClick,
+                            focusRequester = takeFirstRowRequester(),
                         )
                         SettingsGroupDivider(isTablet = isTablet)
                     }

@@ -40,6 +40,7 @@ import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.themePalette
+import com.nuvio.app.core.ui.tvFocusRing
 import com.nuvio.app.core.ui.visualNavIndex
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.abs
@@ -127,6 +128,7 @@ internal fun JellyTabTargets(
                         indication = null,
                         onClick = onClick,
                     )
+                    .tvFocusRing(cornerRadius = 24.dp)
                     .clearAndSetSemantics {
                         role = Role.Tab
                         selected = item.selected

@@ -55,6 +55,7 @@ import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.PlatformBackHandler
 import com.nuvio.app.core.ui.isLiquidGlassNativeTabBarSupported
+import com.nuvio.app.core.ui.rememberTvInitialFocus
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.details.MetaScreenSettingsRepository
 import com.nuvio.app.features.details.MetaScreenSettingsUiState
@@ -156,6 +157,9 @@ fun SettingsScreen(
         modifier = modifier.fillMaxSize(),
     ) {
         val screenActive = LocalScreenActive.current
+        // TV remote (DPAD): focus the first settings row when this tab
+        // becomes active. Without an initial focus, DPAD keys are ignored.
+        val firstRowFocusRequester = rememberTvInitialFocus()
         val pageStateHolder = rememberSaveableStateHolder()
         val playerSettingsUiState by remember {
             PlayerSettingsRepository.ensureLoaded()
@@ -726,6 +730,7 @@ private fun MobileSettingsScreen(
                             onSwitchProfileClick = onSwitchProfile,
                             onWatchPartyClick = watchPartyRowClick,
                             showSupportersContributorsPage = AppFeaturePolicy.supportersContributorsPageEnabled,
+                            firstRowFocusRequester = firstRowFocusRequester,
                         )
                     }
                 }
@@ -1165,6 +1170,7 @@ private fun TabletSettingsScreen(
                                 showAboutSection = activeCategory == SettingsCategory.About,
                                 showAdvancedSection = activeCategory == SettingsCategory.Advanced,
                                 showSupportersContributorsPage = AppFeaturePolicy.supportersContributorsPageEnabled,
+                                firstRowFocusRequester = firstRowFocusRequester,
                             )
                         }
                     }

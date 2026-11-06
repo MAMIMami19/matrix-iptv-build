@@ -20,6 +20,8 @@ fun HomePosterCard(
     showLandscapeOverlay: Boolean = true,
     /** 1-based rank for the trending rows; null = regular poster card. */
     rankNumber: Int? = null,
+    /** TV remote (DPAD) entry point: forwarded to the poster card. */
+    focusRequester: androidx.compose.ui.focus.FocusRequester? = null,
 ) {
     val posterCardStyle = rememberPosterCardStyleUiState()
     val isLandscapeMode = useLandscapeBackdropMode || posterCardStyle.catalogLandscapeModeEnabled
@@ -48,6 +50,7 @@ fun HomePosterCard(
         onClick = onClick,
         onLongClick = onLongClick,
         rankNumber = rankNumber,
+        focusRequester = focusRequester,
     )
 }
 
