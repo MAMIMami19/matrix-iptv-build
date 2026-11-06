@@ -157,9 +157,6 @@ fun SettingsScreen(
         modifier = modifier.fillMaxSize(),
     ) {
         val screenActive = LocalScreenActive.current
-        // TV remote (DPAD): focus the first settings row when this tab
-        // becomes active. Without an initial focus, DPAD keys are ignored.
-        val firstRowFocusRequester = rememberTvInitialFocus()
         val pageStateHolder = rememberSaveableStateHolder()
         val playerSettingsUiState by remember {
             PlayerSettingsRepository.ensureLoaded()
@@ -609,6 +606,9 @@ private fun MobileSettingsScreen(
     onCollectionsClick: () -> Unit = {},
     onWatchPartyClick: () -> Unit = {},
 ) {
+    // TV remote (DPAD): focus the first settings row when this tab becomes
+    // active. Without an initial focus, DPAD keys are ignored.
+    val firstRowFocusRequester = rememberTvInitialFocus()
     val saveableStateHolder = rememberSaveableStateHolder()
     saveableStateHolder.SaveableStateProvider(page.name) {
         var settingsSearchQuery by rememberSaveable { mutableStateOf("") }
@@ -987,6 +987,9 @@ private fun TabletSettingsScreen(
     onCollectionsClick: () -> Unit = {},
     onWatchPartyClick: () -> Unit = {},
 ) {
+    // TV remote (DPAD): focus the first settings row when this tab becomes
+    // active. Without an initial focus, DPAD keys are ignored.
+    val firstRowFocusRequester = rememberTvInitialFocus()
     var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.General.name) }
     val activeCategory = SettingsCategory.valueOf(selectedCategory)
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
