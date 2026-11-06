@@ -132,6 +132,8 @@ fun HomeScreen(
     onFirstCatalogRendered: (() -> Unit)? = null,
     onMatrixBrandClick: ((com.nuvio.app.features.matrix.MatrixBrand) -> Unit)? = null,
     onTopFilterClick: ((String) -> Unit)? = null,
+    // Matrix: opens the Search tab. Only used for the phone home search bar.
+    onSearchClick: (() -> Unit)? = null,
 ) {
     LaunchedEffect(Unit) {
         AddonRepository.initialize()
@@ -1003,6 +1005,17 @@ fun HomeScreen(
             topPadding = if (showHeroSlot) 0.dp else null,
             listState = homeListState,
         ) {
+            // Matrix: home search bar (phone only). On TV/tablet layouts
+            // (maxWidth >= 768.dp, the app's tablet threshold) the home
+            // screen has the top nav instead, so no search field is added
+            // there and the v2.3 DPAD initial focus on the first chip is
+            // untouched. Tapping opens the Search tab with focus ready.
+            if (onSearchClick != null && maxWidth < 768.dp) {
+                item(key = "matrix_home_search", contentType = "matrix_home_search") {
+                    HomeSearchBar(onClick = { onSearchClick() })
+                }
+            }
+
             if (showHeroSlot) {
                 item(key = "home_hero", contentType = "hero") {
                     Crossfade(
@@ -2097,3 +2110,45 @@ private fun ContinueWatchingItem.isCloudLibraryContinueWatchingItem(): Boolean =
 private fun WatchProgressEntry.isCloudLibraryProgressEntry(): Boolean =
     contentType.equals(CloudLibraryContentType, ignoreCase = true) ||
         parentMetaType.equals(CloudLibraryContentType, ignoreCase = true)
+
+/**
+ * Matrix: tappable search bar for the phone home screen. It is a fake
+ * field (icon + placeholder) — tapping it opens the Search tab with the
+ * real search field focused. Phone only: it is only composed when the
+ * home list is narrower than 768.dp, so the TV home never gets a
+ * focusable search field. Dark theme with the violet Matrix accent.
+ */
+@Composable
+private fun HomeSearchBar(onClick: () -> Unit) {
+    androidx.compose.material3.Surface(
+        onClick = onClick,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+        color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            androidx.compose.ui.graphics.Color(0xFFA855F7).copy(alpha = 0.35f),
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    ) {
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
+        ) {
+            androidx.compose.material3.Icon(
+                imageVector = androidx.compose.material.icons.Icons.Rounded.Search,
+                contentDescription = null,
+                tint = androidx.compose.ui.graphics.Color(0xFFA855F7),
+            )
+            androidx.compose.material3.Text(
+                text = stringResource(Res.string.compose_search_placeholder),
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+        }
+    }
+}

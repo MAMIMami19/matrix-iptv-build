@@ -437,6 +437,12 @@ internal fun MainAppContent(
     fun handleRootTabClick(tab: AppScreenTab) {
         if (selectedTab != tab) {
             activateTab(tab)
+            // Matrix: opening Search (e.g. from the phone home search bar)
+            // focuses its field so the keyboard is ready, same as re-tapping
+            // the Search tab below.
+            if (tab == AppScreenTab.Search) {
+                searchFocusRequestCount++
+            }
             return
         }
 

@@ -70,8 +70,8 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         // Matrix IPTV is a fresh app: version starts at 1/1.0 (does not follow the iOS xcconfig).
-        versionCode = 6
-        versionName = "2.4"
+        versionCode = 7
+        versionName = "2.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

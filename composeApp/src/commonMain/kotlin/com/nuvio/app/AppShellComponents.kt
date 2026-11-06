@@ -156,6 +156,7 @@ internal fun AppTabHost(
                         onFolderClick = actions.onFolderClick,
                         onFirstCatalogRendered = actions.onInitialHomeContentRendered,
                         onMatrixBrandClick = actions.onMatrixBrandClick,
+                        onSearchClick = { actions.onTabSelected?.invoke(AppScreenTab.Search) },
                         onTopFilterClick = { label ->
                             when (label) {
                                 "مباشر" -> actions.onTabSelected?.invoke(AppScreenTab.LiveTv)
