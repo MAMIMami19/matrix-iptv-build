@@ -12,6 +12,8 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -2138,7 +2140,7 @@ private fun HomeSearchBar(onClick: () -> Unit) {
             horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
         ) {
             androidx.compose.material3.Icon(
-                imageVector = androidx.compose.material.icons.Icons.Rounded.Search,
+                imageVector = Icons.Rounded.Search,
                 contentDescription = null,
                 tint = androidx.compose.ui.graphics.Color(0xFFA855F7),
             )
