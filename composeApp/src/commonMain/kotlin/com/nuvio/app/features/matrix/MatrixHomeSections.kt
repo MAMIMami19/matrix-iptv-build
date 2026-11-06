@@ -1,6 +1,7 @@
 package com.nuvio.app.features.matrix
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -43,13 +45,15 @@ import kotlin.math.min
  * When [ranked] is true, posters render with big outlined rank numerals
  * (Top-10 style, supported by NuvioPosterCard).
  *
- * Posters render as a 3D cover-flow carousel: the poster nearest the
- * viewport center is large and front-facing, while neighbours angle away
- * in 3D (rotationY), shrink, fade slightly, and dip down a touch, like a
- * cylindrical carousel. The transform is purely visual (graphicsLayer), so
+ * Posters render as a 3D cover-flow carousel in the "ART OF 2025"
+ * motion-poster style: the poster nearest the viewport center is larger
+ * than life, front-facing and perfectly sharp on a pure-black stage,
+ * while neighbours lean away in 3D (rotationY), shrink, blur, fade
+ * slightly, and dip down a touch, like a cylindrical carousel. The
+ * transform is purely visual (graphicsLayer + image-only blur), so
  * tap-to-open-details and DPAD left/right focus keep working exactly as
- * before. Live TV / IPTV channel rows do not use this composable, so they
- * are unaffected.
+ * before, and the violet TV focus ring stays sharp. Live TV / IPTV
+ * channel rows do not use this composable, so they are unaffected.
  */
 @Composable
 fun MatrixSectionRow(
@@ -72,14 +76,16 @@ fun MatrixSectionRow(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 22.sp,
             ),
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
         )
         LazyRow(
             state = listState,
+            // Pure-black stage behind the posters, like the reference.
+            modifier = Modifier.background(Color.Black),
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -105,12 +111,24 @@ fun MatrixSectionRow(
                     0f
                 }
                 val distance = min(abs(visualOffset), 1f)
+                // Side posters blur as they recede; the centered poster
+                // stays perfectly sharp. Skip the blur entirely near the
+                // center so the focused poster pays no blur cost on the
+                // TV box (light version of the reference effect).
+                val posterBlur = if (distance > 0.08f) {
+                    (distance * CoverFlowMaxBlurDp).dp
+                } else {
+                    0.dp
+                }
                 Box(
                     modifier = Modifier.graphicsLayer {
                         // Outer edge recedes: right-of-center leans right/back,
-                        // left-of-center leans left/back.
+                        // left-of-center leans left/back. Stronger lean than
+                        // v2.2 so the side posters read as a tilted stage.
                         rotationY = visualOffset * CoverFlowMaxRotationY
-                        val scale = 1f - distance * CoverFlowScaleDrop
+                        // Center poster pops larger than life; sides shrink
+                        // away from it.
+                        val scale = CoverFlowCenterScale - distance * CoverFlowScaleDrop
                         scaleX = scale
                         scaleY = scale
                         alpha = 1f - distance * CoverFlowAlphaDrop
@@ -127,6 +145,7 @@ fun MatrixSectionRow(
                         rankNumber = if (ranked) index + 1 else null,
                         onClick = onPosterClick?.let { { it(item) } },
                         focusRequester = if (index == 0) firstItemFocusRequester else null,
+                        posterBlurRadius = posterBlur,
                     )
                 }
             }
@@ -134,11 +153,13 @@ fun MatrixSectionRow(
     }
 }
 
-private const val CoverFlowMaxRotationY = 45f
-private const val CoverFlowScaleDrop = 0.15f
-private const val CoverFlowAlphaDrop = 0.25f
-private const val CoverFlowDipDp = 6f
+private const val CoverFlowMaxRotationY = 58f
+private const val CoverFlowCenterScale = 1.08f
+private const val CoverFlowScaleDrop = 0.30f
+private const val CoverFlowAlphaDrop = 0.30f
+private const val CoverFlowDipDp = 8f
 private const val CoverFlowCameraDistance = 12f
+private const val CoverFlowMaxBlurDp = 6f
 
 /**
  * The "استكشف حسب العلامة" (explore by brand) chips row from the Showflix home.

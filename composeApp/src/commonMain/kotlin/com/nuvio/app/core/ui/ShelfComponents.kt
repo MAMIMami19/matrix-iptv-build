@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.focusRequester
@@ -165,6 +166,12 @@ fun NuvioPosterCard(
      * (used for the first poster of the first row of a tab).
      */
     focusRequester: androidx.compose.ui.focus.FocusRequester? = null,
+    /**
+     * "ART OF 2025" motion-poster stage: blur radius applied to the poster
+     * image ONLY, so the violet TV focus ring and the title below stay
+     * sharp. 0.dp = no blur (default: every other caller is unaffected).
+     */
+    posterBlurRadius: Dp = 0.dp,
 ) {
     val posterCardStyle = rememberPosterCardStyleUiState()
     val tokens = MaterialTheme.nuvio
@@ -221,7 +228,11 @@ fun NuvioPosterCard(
                 AsyncImage(
                     model = imageModel,
                     contentDescription = title,
-                    modifier = Modifier.matchParentSize(),
+                    modifier = Modifier.matchParentSize()
+                        .then(
+                            if (posterBlurRadius > 0.dp) Modifier.blur(posterBlurRadius)
+                            else Modifier
+                        ),
                     contentScale = ContentScale.Crop,
                 )
             } else {
