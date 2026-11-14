@@ -5,6 +5,7 @@
 ## PR type
 
 <!-- Check exactly one. PRs outside these types are not accepted. -->
+
 - [ ] Reproducible bug fix
 - [ ] UI glitch/bug fix
 - [ ] Behavior bug/regression fix
@@ -13,18 +14,25 @@
 - [ ] Translation/localization only
 - [ ] Approved larger or directional change
 
+<!-- For PRs that do not fix a bug, explain why reproduction steps do not apply. -->
+
 ## Why
 
-<!-- Why this change is needed. Explain the user-visible bug, regression, maintenance need, docs error, or approved request. -->
+<!-- Why this change is needed. Describe the problem or approved request. -->
 
 ## Issue or approval
 
-<!-- Required. Link the bug issue or approved feature request. For docs/translation/maintenance with no issue, explain why no issue is needed. -->
-<!-- Examples: Fixes #123 / Approved in #456 / No linked issue: typo-only docs fix. -->
+<!-- Required for bug fixes and approved changes. Link the bug issue or approved feature request. For maintenance, docs, or localization PRs with no issue, explain why no issue is needed. -->
+<!-- Examples: Fixes #123 / No linked issue: localization-only update. -->
+
+## Reproduction steps
+
+<!-- Required for bug fixes. For other PRs, explain why reproduction steps do not apply, for example: No reproduction steps - documentation-only update. -->
 
 ## UI / behavior impact
 
 <!-- Check every box that applies. At least one must be checked. -->
+
 - [ ] No UI change
 - [ ] No behavior change
 - [ ] UI changed only to fix a documented glitch/bug
@@ -35,16 +43,16 @@
 ## Policy check
 
 <!-- ALL boxes must be checked or the PR will be closed without review. -->
+
 - [ ] I have read and understood `CONTRIBUTING.md`.
-- [ ] This PR is small, focused, and limited to one problem.
-- [ ] This PR is not cosmetic-only.
-- [ ] Any UI change fixes a linked glitch/bug and includes visual proof, or this PR has no UI change.
-- [ ] Any behavior change fixes a linked bug/regression or has explicit approval, or this PR has no behavior change.
+- [ ] This PR fits an accepted contribution category.
+- [ ] Any feature, larger change, dependency addition, or architecture change has explicit maintainer approval.
+- [ ] This PR is focused on one problem or approved request.
 - [ ] This PR does not bundle unrelated refactors, cleanups, formatting, or drive-by changes.
-- [ ] This PR does not add dependencies, architecture changes, migrations, or product-direction changes without explicit approval.
+- [ ] This PR includes a linked issue, reproduction steps, and testing notes if it is a bug fix.
 - [ ] I listed the testing performed below.
 
-> UI polish, cosmetic-only changes, minor behavior tweaks, and unapproved product changes will be closed without review.
+> Feature work and larger changes require a linked, approved feature request. Cosmetic-only UI changes and unrelated work will be closed without review.
 
 ## Scope boundaries
 
@@ -52,9 +60,9 @@
 
 ## Testing
 
-<!-- What you tested and how. Include devices/emulators, commands, and manual flows. Do not write only "not tested" unless this is docs/translation-only. -->
+<!-- What you tested and how. Include relevant devices/emulators, commands, and manual flows. For docs or localization-only changes, describe the content checks performed. -->
 
-## Screenshots / Video (UI changes only)
+## Screenshots / Video
 
 <!-- Required for any UI change. Write "Not a UI change" only if no UI changed. -->
 
@@ -64,4 +72,4 @@
 
 ## Linked issues
 
-<!-- Required for bug fixes, UI glitch fixes, behavior fixes, and approved changes. For docs/translation/maintenance with no issue, write: No linked issue - reason. -->
+<!-- Required for bug fixes and approved changes. For maintenance, docs, or localization PRs with no issue, explain why no issue is needed. -->

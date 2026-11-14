@@ -27,12 +27,10 @@ body:
         - Watch Progress
         - Subtitles
         - Audio
-        - Navigation / Gestures
+        - Focus / Remote navigation
         - UI / Layout
         - Settings
         - Sync (Trakt / remote)
-        - Downloads / Offline
-        - Platform-specific (iOS only / Android only / Desktop only)
         - Other
     validations:
       required: true

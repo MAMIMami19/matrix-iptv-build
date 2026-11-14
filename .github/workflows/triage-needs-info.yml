@@ -40,7 +40,7 @@ jobs:
             }
 
             const NEEDS_INFO = "needs-info";
-            const NEEDS_INFO_COLOR = "d4c5f9";
+            const NEEDS_INFO_COLOR = "d4c5f9"; // light purple (GitHub-ish)
             const NEEDS_INFO_DESC = "More details needed to reproduce / triage.";
 
             function hasLabel(name) {
@@ -117,6 +117,8 @@ jobs:
             const extra = extractSection("Anything else? (optional)");
             const summaryTitle = stripIssuePrefix(title);
 
+            // Only triage bug-style issues.
+            // Skip feature/enhancement issues so they don't get "missing repro" comments.
             const looksLikeBugForm = !!(description || steps || expected || actual);
             const isBugIssue = hasLabel("bug") || looksLikeBugForm;
             const isFeatureIssue =
@@ -128,6 +130,7 @@ jobs:
               return;
             }
 
+            // Keep checks simple and forgiving: required fields can still be low-effort (e.g. "doesn't work").
             const problems = [];
             const genericTitle = /^(bug|issue|problem|help|question|crash|broken|error|bug report|short summary here|title here)$/i;
             const numericOnlyTitle = /^#?\d+$/;
@@ -161,9 +164,12 @@ jobs:
               try {
                 await github.rest.issues.getLabel({ owner, repo, name });
               } catch (e) {
+                // Create if missing.
                 try {
                   await github.rest.issues.createLabel({ owner, repo, name, color, description });
-                } catch (_) {}
+                } catch (_) {
+                  // Ignore if it was created concurrently or permissions differ.
+                }
               }
             }
 
@@ -180,7 +186,7 @@ jobs:
                 });
               }
 
-              const marker = "<!-- nuvio-bot:crash-logs-required-close -->";
+              const marker = "<!-- nuviotv-bot:crash-logs-required-close -->";
               const comments = await github.paginate(github.rest.issues.listComments, {
                 owner,
                 repo,
@@ -196,11 +202,8 @@ jobs:
                   body:
                     `${marker}\n` +
                     `Closing this crash report because crash reports must include logs.\n\n` +
-                    `Please open a new report, or ask us to reopen this one, with a log snippet or stack trace from around the crash.\n\n` +
-                    `Useful examples:\n` +
-                    `- Android: \`adb logcat -d | tail -n 300\`\n` +
-                    `- iOS: crash log from Xcode Organizer or Console.app\n` +
-                    `- Desktop: terminal/console output from around the crash`,
+                    `Please open a new report, or ask us to reopen this one, with a short logcat snippet or stack trace from around the crash.\n\n` +
+                    `Useful example: \`adb logcat -d | tail -n 300\``,
                 });
               }
               await github.rest.issues.update({
@@ -224,17 +227,19 @@ jobs:
                 });
               }
 
-              const marker = "<!-- nuvio-bot:needs-info -->";
+              const marker = "<!-- nuviotv-bot:needs-info -->";
               const commentBody =
                 `${marker}\n` +
                 `Thanks for the report. Could you add more detail so we can reproduce it?\n\n` +
                 `Missing / too vague:\n` +
                 problems.map(p => `- ${p}`).join("\n") +
                 `\n\n` +
-                `Use a specific title, for example: \`[Bug]: Playback freezes when switching audio tracks on iOS\`.\n` +
+                `Use a specific title, for example: \`[Bug]: Continue Watching shows percent instead of time left\`.\n` +
                 `Reports that only say "not working", "broken", or "same issue" are not enough to debug.\n` +
-                `Logs are optional for most issues, but they help a lot. Crash reports without logs are closed automatically.\n`;
+                `Logcat is optional for most issues, but it helps a lot. Crash reports without logs are closed automatically.\n` +
+                `Example: \`adb logcat -d | tail -n 300\``;
 
+              // Avoid spamming duplicate bot comments on every edit.
               const comments = await github.paginate(github.rest.issues.listComments, {
                 owner,
                 repo,
@@ -251,6 +256,7 @@ jobs:
                 });
               }
             } else if (hasNeedsInfo) {
+              // If the user filled things in later, remove needs-info automatically.
               try {
                 await github.rest.issues.removeLabel({ owner, repo, issue_number, name: NEEDS_INFO });
               } catch (_) {}

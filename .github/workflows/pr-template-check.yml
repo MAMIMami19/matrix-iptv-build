@@ -40,11 +40,11 @@ jobs:
             }
 
             function checkedLines(content) {
-              return (content || "").match(/^\s*-\s+\[[xX]\]\s+.+$/gm) || [];
+              return (content || "").match(/^\s*[-*+]\s+\[[xX]\]\s+.+$/gm) || [];
             }
 
             function uncheckedLines(content) {
-              return (content || "").match(/^\s*-\s+\[\s\]\s+.+$/gm) || [];
+              return (content || "").match(/^\s*[-*+]\s+\[\s\]\s+.+$/gm) || [];
             }
 
             function hasIssueReference(content) {
@@ -56,6 +56,7 @@ jobs:
               "PR type",
               "Why",
               "Issue or approval",
+              "Reproduction steps",
               "UI / behavior impact",
               "Policy check",
               "Scope boundaries",
@@ -96,6 +97,22 @@ jobs:
             if (sectionContent("PR type") !== null && prTypeChecked.length !== 1) {
               failedRules.push("Check exactly one PR type.");
             }
+            const checkedTypeText = prTypeChecked.join(" ");
+            const allowedTypes = [
+              "Reproducible bug fix",
+              "UI glitch/bug fix",
+              "Behavior bug/regression fix",
+              "Small maintenance only, with no UI or behavior change",
+              "Docs accuracy fix",
+              "Translation/localization only",
+              "Approved larger or directional change",
+              "Critical bug fix",
+            ];
+            const checkedType = checkedTypeText.replace(/^\s*[-*+]\s+\[[xX]\]\s+/, "").trim();
+            const allowedType = allowedTypes.includes(checkedType);
+            if (sectionContent("PR type") !== null && prTypeChecked.length === 1 && !allowedType) {
+              failedRules.push("Choose an accepted PR type from the template.");
+            }
 
             const impactContent = sectionContent("UI / behavior impact") || "";
             const impactChecked = checkedLines(impactContent);
@@ -113,21 +130,20 @@ jobs:
               failedRules.push("Every Policy check box must be checked.");
             }
 
-            const checkedTypeText = prTypeChecked.join(" ");
             const issueRequired =
-              /bug fix|ui glitch|behavior bug|approved larger|approved directional/i.test(checkedTypeText);
+              /bug fix|bug\/regression fix|approved larger or directional change/i.test(checkedTypeText);
             const issueText = [
               cleanedContent("Issue or approval") || "",
               cleanedContent("Linked issues") || "",
             ].join(" ");
             if (issueRequired && !hasIssueReference(issueText)) {
-              failedRules.push("Bug fixes, UI glitch fixes, behavior fixes, and approved changes must link an issue or approved request.");
+              failedRules.push("Bug fixes and approved changes must link an issue or approved feature request.");
             }
 
             const uiChanged = checkedLines(impactContent).some((line) =>
               /UI changed only to fix a documented glitch\/bug|UI change has explicit maintainer approval/i.test(line)
             );
-            const screenshotText = (cleanedContent("Screenshots / Video") || "").toLowerCase();
+            const screenshotText = (cleanedContent("Screenshots / Video") || "").toLowerCase().replace(/\.$/, "");
             if (uiChanged && ["none", "n/a", "na", "not a ui change", "not applicable"].includes(screenshotText)) {
               failedRules.push("UI changes must include before/after screenshots or video.");
             }

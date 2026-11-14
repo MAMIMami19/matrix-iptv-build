@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve Nuvio.
+Thanks for helping improve NuvioTV.
 
 ## Strict rules - read before opening anything
 
@@ -18,12 +18,13 @@ Pull requests are accepted only when they fit one of these categories:
 - Small maintenance work that does not change UI, UX, behavior, dependencies, architecture, or public contracts
 - Small documentation fixes that improve accuracy
 - Translation/localization updates
+- Larger or directional changes with a linked, approved feature request
 
 Pull requests are not accepted for:
 
-- New major features
-- Product direction changes
-- UX/UI redesigns
+- New features without prior approval
+- Product direction changes without prior approval
+- UX/UI redesigns without prior approval
 - Cosmetic-only UI changes
 - "Minor polish" changes to colors, spacing, typography, icons, copy, layout, animations, or visual style
 - Behavior changes that are not tied to a reproducible bug or approved feature request
@@ -38,22 +39,24 @@ Translation PRs are allowed, as long as they stay focused on translation/localiz
 
 Do not open a pull request for a UI change just because it looks better, cleaner, more modern, or more consistent to you.
 
-UI PRs are accepted only when they fix a specific, documented glitch or bug, such as:
+UI PRs need explicit maintainer approval unless they fix a specific, documented glitch or bug, such as:
 
 - Broken layout
 - Overlapping or clipped text
 - Unreadable content
 - Incorrect visual state
-- Navigation, gesture, or focus glitches
+- Remote/focus navigation glitches
 - A visible regression from a previous version
 - A crash, blank screen, or unusable screen caused by UI code
 
-Every UI PR must include:
+Every UI bug-fix PR must include:
 
 - A linked bug issue
 - A short explanation of the exact glitch being fixed
 - Before and after screenshots or a short video
 - The smallest possible change that fixes the glitch
+
+For approved UI changes, link the approved feature request and include before and after screenshots or a short video.
 
 Cosmetic-only UI PRs will be closed, even if the change is small.
 
@@ -61,7 +64,7 @@ Cosmetic-only UI PRs will be closed, even if the change is small.
 
 ## Behavior changes
 
-Behavior includes, but is not limited to, playback, stream/source selection, resume state, watched state, search, sync, settings defaults, navigation, gestures, error handling, caching, networking, storage, downloads, offline behavior, and account-related flows.
+Behavior includes, but is not limited to, playback, stream/source selection, resume state, watched state, search, sync, settings defaults, navigation, focus movement, error handling, caching, networking, storage, and account-related flows.
 
 Do not open a PR that changes behavior unless one of these is true:
 
@@ -107,31 +110,25 @@ To keep issues fixable, bug reports should include:
 
 - A short, specific issue title that describes the bug
 - App version (release version or commit hash)
-- Platform (Android / iOS / Desktop) + device model + OS version
-- Install method (release build / TestFlight / CI / built from source)
+- Platform + device model + Android version
+- Install method (release APK / CI / built from source)
 - Steps to reproduce (exact steps)
 - Expected vs actual behavior
 - Frequency (always/sometimes/once)
 
 Do not leave the title as just `[Bug]:` or another generic placeholder.
 
-Logs are optional for most issues, but they are **required** for crash / force-close reports.
+Logcat is optional for most issues, but it is **required** for crash / force-close reports.
 
 ### How to capture logs (optional)
 
-**Android:**
+If you can, reproduce the issue once, then attach a short log snippet from around the time it happened:
 
 ```sh
 adb logcat -d | tail -n 300
 ```
 
-**iOS:**
-
-Attach a crash log from Xcode Organizer or Console.app, or reproduce while connected to Xcode and copy the relevant log output.
-
-**Desktop:**
-
-Copy the relevant terminal/console output from around the time the issue occurred.
+If the issue is a crash, include a stack trace or log snippet from Android Studio or `adb logcat`.
 
 ---
 
@@ -143,7 +140,7 @@ Please include:
 - Your proposed solution
 - Alternatives considered (if any)
 
-Opening a feature request does **not** mean a pull request will be accepted for it. If the feature affects product scope, UX direction, or adds a significant new surface area, do not start implementation unless a maintainer explicitly approves it first.
+Opening a feature request does **not** mean a pull request will be accepted for it. Do not start implementation unless a maintainer explicitly approves it first.
 
 **Large changes require an approved feature request before any PR is submitted.** See the [Large PRs and large changes](#large-prs-and-large-changes) section above.
 
@@ -154,11 +151,11 @@ Opening a feature request does **not** mean a pull request will be accepted for 
 Please make sure your PR is all of the following:
 
 - Allowed by this policy
-- Small in scope and focused on one problem
+- Focused on one problem, with approval for any larger scope
 - Clearly aligned with the current direction of the project
 - Not cosmetic-only
 - Not changing behavior unless it fixes a linked bug or has explicit approval
-- Not changing UI unless it fixes a linked glitch/bug and includes visual proof
+- Not changing UI unless it fixes a linked glitch/bug or has explicit approval, with visual proof either way
 - Not bundling refactors, cleanups, or drive-by changes with a bug fix
 - Tested manually and/or automatically in a way that matches the risk
 - Linked to an approved feature request issue if large, directional, or non-trivial

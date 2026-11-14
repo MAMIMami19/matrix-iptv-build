@@ -14,7 +14,6 @@ permissions:
 jobs:
   comment:
     name: Comment PR with debug build result
-    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'cancelled'
     runs-on: ubuntu-latest
 
     steps:
@@ -49,9 +48,9 @@ jobs:
               return;
             }
 
-            const marker = "<!-- full-debug-build -->";
+            const marker = "<!-- nuvio-full-debug-build -->";
             const runUrl = run.html_url;
-            const artifactName = "androidApp-full-debug.apk";
+            const artifactName = "app-full-universal-debug.apk";
             let body;
 
             if (run.conclusion === "success") {
@@ -71,7 +70,7 @@ jobs:
                 "Full debug APK build completed successfully.",
                 "",
                 artifact
-                  ? `[Download universal APK](${artifactUrl})`
+                  ? `[Download APK](${artifactUrl})`
                   : `[View build](${runUrl})`
               ].join("\n");
             } else {
@@ -81,7 +80,7 @@ jobs:
                 "",
                 `Logs: ${runUrl}`,
                 "",
-                "Open the workflow run to see the failed step."
+                "Open the failed workflow run and expand the failed step to see the Gradle error."
               ].join("\n");
             }
 
