@@ -1294,6 +1294,32 @@ private fun PlaybackNavHost(
             )
         }
 
+        // Matrix IPTV: Live TV + VOD over the embedded Xtream line.
+        rootComposable(Screen.Iptv.route) { backStackEntry ->
+            val iptvViewModel: com.nuvio.tv.matrix.iptv.IptvViewModel =
+                androidx.hilt.navigation.compose.hiltViewModel(backStackEntry)
+            com.nuvio.tv.matrix.iptv.IptvScreen(
+                onPlay = { title, streamId, url, contentType, poster, season, episode ->
+                    navController.navigate(
+                        Screen.Player.createRoute(
+                            streamUrl = url,
+                            title = title,
+                            headers = mapOf("User-Agent" to "Mozilla/5.0"),
+                            contentId = "iptv:$streamId",
+                            contentType = contentType,
+                            contentName = title,
+                            poster = poster,
+                            videoId = "iptv:$streamId",
+                            season = season,
+                            episode = episode,
+                            startFromBeginning = contentType == "tv"
+                        )
+                    )
+                },
+                onClearProgress = { keys -> iptvViewModel.clearIptvProgress(keys) }
+            )
+        }
+
         rootComposable(Screen.Settings.route) {
             SettingsScreen(
                 showBuiltInHeader = !hideBuiltInHeaders,

@@ -97,6 +97,10 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
         val tag = getSharedPreferences("app_locale", Context.MODE_PRIVATE)
             .getString("locale_tag", null)
         LocaleCache.localeTag = tag ?: "ar"
+
+        // Matrix IPTV settings (PIN, favorites, locks) live in their own
+        // SharedPreferences file, shared with the 0.6.3-based builds.
+        com.nuvio.tv.matrix.iptv.IptvSettingsStorage.initialize(this)
     }
 
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)

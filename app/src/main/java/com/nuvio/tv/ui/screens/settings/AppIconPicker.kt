@@ -254,12 +254,13 @@ internal val AppIconOption.iconResource: Int
 
 internal val AppIconOption.bannerResource: Int
     get() = when (this) {
-        AppIconOption.ORIGINAL -> R.mipmap.banner
-        AppIconOption.ARCTIC_BLUE -> R.mipmap.banner_arctic_blue
-        AppIconOption.EMERALD -> R.mipmap.banner_emerald
-        AppIconOption.ROSE_GOLD -> R.mipmap.banner_rose_gold
-        AppIconOption.COPPER -> R.mipmap.banner_copper
-        AppIconOption.GRAPHITE -> R.mipmap.banner_graphite
+        // Matrix: all icon variants share the same rainbow-M banner.
+        AppIconOption.ORIGINAL -> R.drawable.matrix_banner
+        AppIconOption.ARCTIC_BLUE -> R.drawable.matrix_banner
+        AppIconOption.EMERALD -> R.drawable.matrix_banner
+        AppIconOption.ROSE_GOLD -> R.drawable.matrix_banner
+        AppIconOption.COPPER -> R.drawable.matrix_banner
+        AppIconOption.GRAPHITE -> R.drawable.matrix_banner
     }
 
 @Composable

@@ -151,6 +151,11 @@ android {
         buildConfigField("String", "SIMKL_APP_NAME", buildConfigString(resolveProperty(devProperties, localProperties, "SIMKL_APP_NAME", "matrix")))
         buildConfigField("String", "MDBLIST_CLIENT_ID", buildConfigString(resolveProperty(devProperties, localProperties, "MDBLIST_CLIENT_ID")))
         buildConfigField("String", "TMDB_API_KEY", "\"${localProperties.getProperty("TMDB_API_KEY", "")}\"")
+        // Matrix IPTV default Xtream line (from CI secrets via local.properties).
+        // Values are compiled into the APK, as in the 0.6.3-based builds.
+        buildConfigField("String", "XTREAM_SERVER", buildConfigString(localProperties.getProperty("NUVIO_XTREAM_SERVER", "")))
+        buildConfigField("String", "XTREAM_USERNAME", buildConfigString(localProperties.getProperty("NUVIO_XTREAM_USER", "")))
+        buildConfigField("String", "XTREAM_PASSWORD", buildConfigString(localProperties.getProperty("NUVIO_XTREAM_PASS", "")))
         buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "https://nuvio.tv/tv-login")}\"")
         buildConfigField("String", "DEVICE_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("DEVICE_LOGIN_WEB_BASE_URL", "https://nuvio.tv/link")}\"")
         buildConfigField("boolean", "DOVI_NATIVE_ENABLED", enableDoviNative.toString())
