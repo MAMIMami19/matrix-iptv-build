@@ -70,5 +70,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: matrix-3.0-release-apks
-          path: "app/build/outputs/apk/full/release/*.apk"
+          # QUOTA WORKAROUND (2026-11-14): the account's 500 MB artifact
+          # storage quota is hit and usage recalculates only every 6-12 h,
+          # so upload ONLY the armeabi-v7a split the box needs (~50 MB).
+          # Restore the full "*.apk" glob after the quota recalculates.
+          path: "app/build/outputs/apk/full/release/*armeabi-v7a*.apk"
           if-no-files-found: error
