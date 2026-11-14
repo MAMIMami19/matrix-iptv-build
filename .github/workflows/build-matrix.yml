@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -66,13 +66,18 @@ jobs:
           # heap. Re-enable on a bigger runner.
           ./gradlew :app:assembleFullRelease -x lintVitalAnalyzeFullRelease --max-workers=2 --stacktrace --console=plain
 
-      - name: Upload release APKs
-        uses: actions/upload-artifact@v4
-        with:
-          name: matrix-3.0-release-apks
-          # QUOTA WORKAROUND (2026-11-14): the account's 500 MB artifact
-          # storage quota is hit and usage recalculates only every 6-12 h,
-          # so upload ONLY the armeabi-v7a split the box needs (~50 MB).
-          # Restore the full "*.apk" glob after the quota recalculates.
-          path: "app/build/outputs/apk/full/release/*armeabi-v7a*.apk"
-          if-no-files-found: error
+      - name: Upload release APKs to a draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Artifact storage quota is hit (500 MB; usage recalculates only
+          # every 6-12 h), so the APKs go to a DRAFT release instead — drafts
+          # are invisible to the in-app updater (unauthenticated API calls
+          # never see them, and the tag is not a valid version anyway).
+          # Delete the draft after the APKs are verified/downloaded.
+          TAG="matrix-3.0-draft-${{ github.run_number }}"
+          gh release create "$TAG" \
+            --draft \
+            --title "Matrix 3.0 draft (CI run ${{ github.run_number }})" \
+            --notes "CI-built Matrix 3.0 release APKs. Draft only — do not publish without review." \
+            app/build/outputs/apk/full/release/*.apk
