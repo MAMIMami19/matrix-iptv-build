@@ -44,6 +44,24 @@ private data class CatalogUpdateResult(
 )
 
 @OptIn(FlowPreview::class)
+/**
+ * Matrix sections: loads the curated matrix-sections catalogs and rebuilds
+ * the home rows whenever they arrive. The rows are injected into
+ * [updateCatalogRowsPipeline] ahead of the addon rows.
+ */
+internal fun HomeViewModel.observeMatrixSectionsPipeline() {
+    com.nuvio.tv.matrix.sections.MatrixSectionsRepository.ensureLoaded()
+    viewModelScope.launch {
+        kotlinx.coroutines.flow.combine(
+            com.nuvio.tv.matrix.sections.MatrixSectionsRepository.catalogs,
+            com.nuvio.tv.matrix.sections.MatrixSectionsRepository.orderedCatalogs
+        ) { _, _ -> Unit }
+            .collectLatest {
+                scheduleUpdateCatalogRows()
+            }
+    }
+}
+
 internal fun HomeViewModel.observeCollectionsPipeline() {
     viewModelScope.launch {
         collectionsDataStore.collections
@@ -729,6 +747,29 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
                 val key = "collection_${collection.id}"
             if (collection.pinToTop && key !in disabledHomeCatalogKeys && addedCollectionIds.add(collection.id)) {
                 add(HomeRow.CollectionRow(collection))
+            }
+        }
+        // Matrix sections: the app's own curated rows, ahead of the addon
+        // rows. They are not part of the user's catalog order and cannot be
+        // hidden from Catalog Order; the JSONs are complete lists, so
+        // hasMore is false (no pagination). Detail resolution falls back
+        // to the installed meta addons (see MatrixSectionsRepository).
+        val matrixOrdered = com.nuvio.tv.matrix.sections.MatrixSectionsRepository.orderedCatalogs.value
+        val matrixCatalogs = com.nuvio.tv.matrix.sections.MatrixSectionsRepository.catalogs.value
+        matrixOrdered.forEach { info ->
+            val items = matrixCatalogs[info.id].orEmpty()
+            if (items.isNotEmpty()) {
+                add(HomeRow.Catalog(CatalogRow(
+                    addonId = com.nuvio.tv.matrix.sections.MatrixSectionsRepository.ADDON_ID,
+                    addonName = "Matrix",
+                    addonBaseUrl = com.nuvio.tv.matrix.sections.MatrixSectionsRepository.BASE_URL,
+                    catalogId = info.id,
+                    catalogName = info.name,
+                    type = com.nuvio.tv.domain.model.ContentType.fromString(info.type),
+                    rawType = info.type,
+                    items = items,
+                    hasMore = false
+                )))
             }
         }
         for (key in orderedKeys) {

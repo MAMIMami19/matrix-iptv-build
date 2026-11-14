@@ -390,6 +390,7 @@ class HomeViewModel @Inject constructor(
             observeBlurUnwatchedEpisodes()
             observeProgressSourceChanges()
             observeCollections()
+            observeMatrixSections()
             observeInstalledAddons()
             observeManualAddonRefresh()
 
@@ -835,6 +836,8 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun observeCollections() = observeCollectionsPipeline()
+
+    private fun observeMatrixSections() = observeMatrixSectionsPipeline()
 
     private fun observeInstalledAddons() = observeInstalledAddonsPipeline()
 
