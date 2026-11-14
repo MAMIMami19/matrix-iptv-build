@@ -30,7 +30,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-          cache: gradle
 
       - name: Write local.properties (backend config + release signing)
         run: |
@@ -58,10 +57,14 @@ jobs:
           chmod +x gradlew
           # lintVitalAnalyzeFullRelease is skipped: on the 7 GB GitHub
           # runner it forks a second JVM while the Gradle daemon holds its
-          # heap, and the runner was OOM-killed there three times in a row
-          # (runs 43618067580/43618374036/43622287943, all cancelled at the
-          # lintVital stage with no error). Re-enable on a bigger runner.
-          ./gradlew :app:assembleFullRelease -x lintVitalAnalyzeFullRelease --stacktrace --console=plain
+          # heap. --max-workers=2 caps parallel Kotlin/native workers so
+          # peak memory stays well under the runner's limit: a 15-minute
+          # idle probe job completed fine while the full build kept being
+          # cancelled with no error at 9-15 min (runs 43618067580,
+          # 43618374036, 43622287943, 43623679091, 43632913528,
+          # 43634260306) — the one success (run 43624695533) used the 4g
+          # heap. Re-enable on a bigger runner.
+          ./gradlew :app:assembleFullRelease -x lintVitalAnalyzeFullRelease --max-workers=2 --stacktrace --console=plain
 
       - name: Upload release APKs
         uses: actions/upload-artifact@v4
