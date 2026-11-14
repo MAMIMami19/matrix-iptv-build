@@ -6,6 +6,8 @@ name: Build Matrix 3.0
 # so builds from this workflow install OVER the Matrix on the box.
 on:
   workflow_dispatch:
+  push:
+    branches: [matrix-3.0-nuvio-1.2]
 
 permissions:
   contents: read
