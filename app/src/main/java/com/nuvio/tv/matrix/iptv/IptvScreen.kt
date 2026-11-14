@@ -39,6 +39,8 @@ fun IptvScreen(
     onPlay: XtreamPlayHandler,
     onClearProgress: (List<Pair<String, String>>) -> Unit,
     modifier: Modifier = Modifier,
+    // Matrix 3.1: open the merged streams panel for a VOD title.
+    onOpenMergedStreams: MergedStreamsHandler? = null,
 ) {
     IptvSettingsRepository.ensureLoaded()
     var selectedTab by remember { mutableStateOf(IptvTab.LiveTv) }
@@ -74,7 +76,7 @@ fun IptvScreen(
         Spacer(modifier = Modifier.height(4.dp))
         when (selectedTab) {
             IptvTab.LiveTv -> LiveTvScreen(onPlay = onPlay)
-            IptvTab.Vod -> VodScreen(onPlay = onPlay)
+            IptvTab.Vod -> VodScreen(onPlay = onPlay, onOpenMergedStreams = onOpenMergedStreams)
             IptvTab.Settings -> IptvSettingsSection()
         }
     }

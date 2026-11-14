@@ -131,6 +131,20 @@ internal object XtreamClient {
     suspend fun vodStreamsAll(): List<XtreamVodStream> =
         cached("vod_all") { json.decodeFromString(getText("get_vod_streams")) }
 
+    /**
+     * Matrix 3.1: the already-cached whole VOD catalog, or null if it has
+     * not been loaded yet. Never fetches: the merged streams panel must
+     * not trigger a full catalog download on an addon title.
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun cachedVodStreams(): List<XtreamVodStream>? =
+        synchronized(cache) { cache["vod_all"] as? List<XtreamVodStream> }
+
+    /** Same as [cachedVodStreams] for the whole series catalog. */
+    @Suppress("UNCHECKED_CAST")
+    fun cachedSeries(): List<XtreamSeries>? =
+        synchronized(cache) { cache["series_all"] as? List<XtreamSeries> }
+
     suspend fun seriesCategories(): List<XtreamCategory> =
         cached("series_categories") { json.decodeFromString(getText("get_series_categories")) }
 

@@ -863,12 +863,6 @@ open class MainActivity : ComponentActivity() {
                             }
                         )
                     } else {
-                    val sidebarCollapsed = mainUiPrefs.sidebarCollapsed
-                    val modernSidebarEnabled = mainUiPrefs.modernSidebarEnabled
-                    val modernSidebarBlurEnabled =
-                        mainUiPrefs.modernSidebarBlurPref && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
-                    val hideBuiltInHeadersForFloatingPill = modernSidebarEnabled && !sidebarCollapsed
-
                     val startDestination = when {
                         needsExperienceSelection -> Screen.ExperienceModeSelection.route
                         layoutChosen -> Screen.Home.route
@@ -1149,7 +1143,6 @@ open class MainActivity : ComponentActivity() {
                     val selectedDrawerRoute = drawerItems.firstOrNull { item ->
                         currentRoute == item.route || currentRoute?.startsWith("${item.route}/") == true
                     }?.route
-                    val selectedDrawerItem = drawerItems.firstOrNull { it.route == selectedDrawerRoute } ?: drawerItems.first()
 
                     val confirmExitEnabled by profileManager.confirmExitEnabled.collectAsState()
                     var backPressedOnce by remember { mutableStateOf(false) }
@@ -1200,47 +1193,25 @@ open class MainActivity : ComponentActivity() {
                         }
                         Box(modifier = Modifier.fillMaxSize()) {
                             CompositionLocalProvider(LocalNavViewModelStoreOwner provides navViewModelStoreOwner) {
-                                if (modernSidebarEnabled) {
-                                    ModernSidebarScaffold(
-                                        longPressBackHeld = longPressBackHeld,
-                                        navController = navController,
-                                        startDestination = startDestination,
-                                        currentRoute = currentRoute,
-                                        rootRoutes = rootRoutes,
-                                        drawerItems = drawerItems,
-                                        selectedDrawerRoute = selectedDrawerRoute,
-                                        selectedDrawerItem = selectedDrawerItem,
-                                        sidebarCollapsed = sidebarCollapsed,
-                                        modernSidebarBlurEnabled = modernSidebarBlurEnabled,
-                                        hideBuiltInHeaders = hideBuiltInHeadersForFloatingPill,
-                                        activeProfileName = activeProfile?.name ?: "",
-                                        activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
-                                        activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
-                                        showProfileSelector = profiles.size > 1,
-                                        onSwitchProfile = handleSwitchProfile,
-                                        onNavigate = { optimisticRoute = it },
-                                        onExitApp = handleExitApp
-                                    )
-                                } else {
-                                    LegacySidebarScaffold(
-                                        longPressBackHeld = longPressBackHeld,
-                                        navController = navController,
-                                        startDestination = startDestination,
-                                        currentRoute = currentRoute,
-                                        rootRoutes = rootRoutes,
-                                        drawerItems = drawerItems,
-                                        selectedDrawerRoute = selectedDrawerRoute,
-                                        sidebarCollapsed = sidebarCollapsed,
-                                        hideBuiltInHeaders = false,
-                                        activeProfileName = activeProfile?.name ?: "",
-                                        activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
-                                        activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
-                                        showProfileSelector = profiles.size > 1,
-                                        onSwitchProfile = handleSwitchProfile,
-                                        onNavigate = { optimisticRoute = it },
-                                        onExitApp = handleExitApp
-                                    )
-                                }
+                                // Matrix 3.1: the sidebar (both modern and
+                                // legacy scaffolds below) is hidden and
+                                // replaced by the Netflix-style top bar.
+                                // Same destinations, no sidebar space taken.
+                                com.nuvio.tv.matrix.MatrixTopBarScaffold(
+                                    navController = navController,
+                                    startDestination = startDestination,
+                                    currentRoute = currentRoute,
+                                    rootRoutes = rootRoutes,
+                                    drawerItems = drawerItems,
+                                    selectedDrawerRoute = selectedDrawerRoute,
+                                    activeProfileName = activeProfile?.name ?: "",
+                                    activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
+                                    activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
+                                    showProfileSelector = profiles.size > 1,
+                                    onSwitchProfile = handleSwitchProfile,
+                                    onNavigate = { optimisticRoute = it },
+                                    onExitApp = handleExitApp
+                                )
                             }
 
                             val autoNextOverlay by externalPlaybackTracker.autoNextOverlay.collectAsState()
@@ -2400,7 +2371,8 @@ private fun CollapsedSidebarPill(
     }
 }
 
-private fun navigateToDrawerRoute(
+// Shared by the Matrix top bar (3.1) — internal, not private.
+internal fun navigateToDrawerRoute(
     navController: NavHostController,
     currentRoute: String?,
     targetRoute: String
@@ -2442,7 +2414,8 @@ private fun isBlockedContentKey(key: Key): Boolean {
 }
 
 @Composable
-private fun DrawerItemIcon(
+// Shared by the Matrix top bar (3.1) — internal, not private.
+internal fun DrawerItemIcon(
     iconRes: Int?,
     icon: ImageVector?,
     modifier: Modifier = Modifier,

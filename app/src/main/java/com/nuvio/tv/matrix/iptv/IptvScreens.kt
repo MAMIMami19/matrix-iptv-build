@@ -68,6 +68,23 @@ internal typealias XtreamPlayHandler = (
     episode: Int?,
 ) -> Unit
 
+/**
+ * Matrix 3.1: open the merged streams panel for an IPTV VOD title —
+ * videoId (IMDb id), content type ("movie"/"series"), clean title, poster,
+ * season/episode (series only), episode name and year. The exact IPTV
+ * stream travels via [IptvMergedStreamHandoff], never in the route.
+ */
+internal typealias MergedStreamsHandler = (
+    videoId: String,
+    contentType: String,
+    title: String,
+    poster: String?,
+    season: Int?,
+    episode: Int?,
+    episodeName: String?,
+    year: String?,
+) -> Unit
+
 @Composable
 private fun IptvLoading() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -776,6 +793,7 @@ private fun VodSectionShelf(
 internal fun VodScreen(
     modifier: Modifier = Modifier,
     onPlay: XtreamPlayHandler,
+    onOpenMergedStreams: MergedStreamsHandler? = null,
 ) {
     IptvSettingsRepository.ensureLoaded()
     val pin by IptvSettingsRepository.pin.collectAsState()
@@ -820,6 +838,8 @@ internal fun VodScreen(
     var globalQuery by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
     var failed by remember { mutableStateOf(false) }
+    // Matrix 3.1: an IMDb-id lookup is in flight for a tapped VOD title.
+    var resolvingSources by remember { mutableStateOf(false) }
     // Full VOD catalog, loaded once in the background: powers the header
     // totals and the global search. Null while loading; a failure leaves it
     // null (totals/search stay unavailable, never guessed).
@@ -939,11 +959,9 @@ internal fun VodScreen(
         loadItems(category)
     }
 
-    fun playMovie(movie: XtreamVodStream) {
-        IptvSettingsRepository.addPlayedIptvKey(
-            "iptv:${movie.streamId}",
-            "iptv:${movie.streamId}",
-        )
+    // Direct IPTV play, as before 3.1: the fallback when the merged panel
+    // cannot be opened (no IMDb id resolved, or no panel handler).
+    fun playMovieDirect(movie: XtreamVodStream) {
         onPlay(
             movie.name,
             movie.streamId,
@@ -956,6 +974,129 @@ internal fun VodScreen(
             null,
             null,
         )
+    }
+
+    fun playEpisodeDirect(
+        series: XtreamSeries,
+        season: Int?,
+        episode: XtreamEpisode,
+        episodeTitle: String,
+    ) {
+        onPlay(
+            "${series.name} - $episodeTitle",
+            episode.id,
+            XtreamClient.episodeStreamUrl(
+                episode.id,
+                episode.containerExtension,
+            ),
+            "series",
+            series.cover,
+            season,
+            episode.episodeNum,
+        )
+    }
+
+    // Matrix 3.1: a VOD tap opens the merged streams panel (addon sources
+    // first, this IPTV stream last) when an IMDb id resolves for the title;
+    // otherwise it plays directly exactly as before.
+    fun playMovie(movie: XtreamVodStream) {
+        IptvSettingsRepository.addPlayedIptvKey(
+            "iptv:${movie.streamId}",
+            "iptv:${movie.streamId}",
+        )
+        val openMerged = onOpenMergedStreams
+        if (openMerged == null) {
+            playMovieDirect(movie)
+            return
+        }
+        scope.launch {
+            resolvingSources = true
+            val cleanName = IptvTitleMatcher.cleanTitle(movie.name)
+            val year = IptvTitleMatcher.parseYear(movie.name)
+            val imdbId = IptvMergedStreams.resolveImdbId(cleanName, year, "movie")
+            resolvingSources = false
+            if (imdbId == null) {
+                playMovieDirect(movie)
+                return@launch
+            }
+            IptvMergedStreamHandoff.set(
+                IptvStreamRef(
+                    streamId = movie.streamId,
+                    url = XtreamClient.movieStreamUrl(
+                        movie.streamId,
+                        movie.containerExtension,
+                    ),
+                    label = cleanName.ifBlank { movie.name },
+                    contentType = "movie",
+                    poster = movie.streamIcon,
+                    season = null,
+                    episode = null,
+                )
+            )
+            openMerged(
+                imdbId,
+                "movie",
+                cleanName.ifBlank { movie.name },
+                movie.streamIcon,
+                null,
+                null,
+                null,
+                year?.toString(),
+            )
+        }
+    }
+
+    fun playEpisode(series: XtreamSeries, season: Int?, episode: XtreamEpisode) {
+        val episodeTitle = episode.title?.takeIf { it.isNotBlank() }
+            ?: "Episode ${episode.episodeNum ?: ""}"
+        IptvSettingsRepository.addPlayedIptvKey(
+            "iptv:${episode.id}",
+            "iptv:${episode.id}",
+        )
+        val openMerged = onOpenMergedStreams
+        if (openMerged == null) {
+            playEpisodeDirect(series, season, episode, episodeTitle)
+            return
+        }
+        scope.launch {
+            resolvingSources = true
+            val cleanName = IptvTitleMatcher.cleanTitle(series.name)
+            val year = IptvTitleMatcher.parseYear(series.name)
+            val imdbId = IptvMergedStreams.resolveImdbId(cleanName, year, "series")
+            resolvingSources = false
+            if (imdbId == null) {
+                playEpisodeDirect(series, season, episode, episodeTitle)
+                return@launch
+            }
+            IptvMergedStreamHandoff.set(
+                IptvStreamRef(
+                    streamId = episode.id,
+                    url = XtreamClient.episodeStreamUrl(
+                        episode.id,
+                        episode.containerExtension,
+                    ),
+                    label = "S%02dE%02d · %s".format(
+                        season ?: 0,
+                        episode.episodeNum ?: 0,
+                        episodeTitle,
+                    ),
+                    contentType = "series",
+                    poster = series.cover,
+                    season = season,
+                    episode = episode.episodeNum,
+                )
+            )
+            openMerged(
+                imdbId,
+                "series",
+                cleanName.ifBlank { series.name },
+                series.cover,
+                season,
+                episode.episodeNum,
+                episodeTitle,
+                year?.toString(),
+            )
+        }
     }
 
     fun openSeries(series: XtreamSeries) {
@@ -979,6 +1120,21 @@ internal fun VodScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (resolvingSources) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Finding sources…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         Spacer(modifier = Modifier.height(12.dp))
         Row {
             TextButton(
@@ -1038,22 +1194,7 @@ internal fun VodScreen(
                                     name = episodeTitle,
                                     infoLine = "Episode ${episode.episodeNum ?: ""}",
                                     onClick = {
-                                        IptvSettingsRepository.addPlayedIptvKey(
-                                            "iptv:${episode.id}",
-                                            "iptv:${episode.id}",
-                                        )
-                                        onPlay(
-                                            "${series.name} - $episodeTitle",
-                                            episode.id,
-                                            XtreamClient.episodeStreamUrl(
-                                                episode.id,
-                                                episode.containerExtension,
-                                            ),
-                                            "series",
-                                            series.cover,
-                                            season.toIntOrNull(),
-                                            episode.episodeNum,
-                                        )
+                                        playEpisode(series, season.toIntOrNull(), episode)
                                     },
                                 )
                             }

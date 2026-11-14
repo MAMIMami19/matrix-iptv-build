@@ -48,6 +48,11 @@ import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.StreamRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
+import com.nuvio.tv.matrix.iptv.IPTV_STREAM_GROUP_NAME
+import com.nuvio.tv.matrix.iptv.IptvMergedStreamHandoff
+import com.nuvio.tv.matrix.iptv.IptvMergedStreams
+import com.nuvio.tv.matrix.iptv.IptvStreamRef
+import com.nuvio.tv.matrix.iptv.XtreamConfig
 import com.nuvio.tv.ui.components.SourceChipItem
 import com.nuvio.tv.ui.components.SourceChipStatus
 import com.nuvio.tv.ui.screens.player.StreamSidecarSubtitles
@@ -56,10 +61,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -122,6 +129,38 @@ class StreamScreenViewModel @Inject constructor(
     private var streamBadgePresentationRequestId = 0L
     private var badgedAddonNames: Set<String> = emptySet()
     private var playbackMetaVideos: List<Video>? = null
+
+    // Matrix 3.1: an IPTV VOD tap hands its exact stream here (consumed
+    // once, at creation) so the merged panel shows it as the last group.
+    private val iptvHandoff: IptvStreamRef? = IptvMergedStreamHandoff.take()
+
+    /**
+     * Matrix 3.1: the extra "IPTV" group for this panel, or null. Prefers
+     * the handoff (exact stream from the VOD tab); otherwise matches the
+     * title against the already-cached Xtream catalog. Never throws.
+     */
+    private suspend fun resolveIptvGroup(): AddonStreams? {
+        iptvHandoff?.let { ref ->
+            return AddonStreams(
+                addonName = IPTV_STREAM_GROUP_NAME,
+                addonLogo = null,
+                streams = listOf(ref.toStream())
+            )
+        }
+        if (!XtreamConfig.isConfigured) return null
+        val match = IptvMergedStreams.findMatchForTitle(
+            title = title,
+            year = year?.toIntOrNull(),
+            type = contentType,
+            season = season,
+            episode = episode
+        ) ?: return null
+        return AddonStreams(
+            addonName = IPTV_STREAM_GROUP_NAME,
+            addonLogo = null,
+            streams = listOf(match)
+        )
+    }
 
     private val embeddedStreamGroupName: String by lazy {
         context.getString(R.string.stream_embedded_group)
@@ -406,6 +445,13 @@ class StreamScreenViewModel @Inject constructor(
         streamLoadScope = newScope
         streamLoadJob = newScope.launch {
             streamLoadCompleted = false
+            // Matrix 3.1: merged IPTV source, resolved concurrently with
+            // the addon search (handoff from the VOD tab, else a cached
+            // catalog title match). applySuccess appends it last whenever
+            // it has landed; the final pass below waits for it briefly.
+            val iptvGroupDeferred = async {
+                runCatching { resolveIptvGroup() }.getOrNull()
+            }
             val playerSettings = playerSettingsDataStore.playerSettings.first()
             if (manualSelection) {
                 directAutoPlayModeInitializedForSession = true
@@ -545,11 +591,16 @@ class StreamScreenViewModel @Inject constructor(
             } else null
 
             fun applySuccess(addonStreamGroups: List<AddonStreams>, isAllLoaded: Boolean) {
+                // Matrix 3.1: the IPTV group is appended AFTER ordering, so
+                // it is always last — addon sources first, IPTV last.
                 val orderedAddonStreams = StreamAutoPlaySelector.orderAddonStreams(
                     addonStreamGroups,
                     installedAddonOrder,
                     preferredServerNames
-                )
+                ).let { ordered ->
+                    val iptvGroup = iptvGroupDeferred.takeIf { it.isCompleted }?.getCompleted()
+                    if (iptvGroup != null) ordered + iptvGroup else ordered
+                }
 
                 // Preserve badges already computed by prior badge jobs so they
                 // don't vanish when repository emits fresh (badge-less) streams.
@@ -902,6 +953,10 @@ class StreamScreenViewModel @Inject constructor(
                 // All addons finished — run auto-select if not yet triggered
                 if (!autoSelectTriggered) {
                     autoSelectTriggered = true
+                    // Matrix 3.1: give the IPTV lookup a bounded moment to
+                    // land so the final panel includes it (cached lookups
+                    // are instant; a slow provider must not hold the panel).
+                    withTimeoutOrNull(3_000L) { iptvGroupDeferred.await() }
                     lastSuccessData?.let { applySuccess(it, isAllLoaded = true) }
                 }
                 markRemainingSourceChipsAsError()

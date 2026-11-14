@@ -1,18 +1,18 @@
-name: Build Matrix 3.0
+name: Build Matrix 3.1
 
-# Matrix 3.0 (NuvioTV 1.2.0 base) CI. Runs on pushes to the rebase branch
+# Matrix 3.1 (NuvioTV 1.2.0 base) CI. Runs on pushes to the 3.1 branch
 # and on manual dispatch; the release-publish step lives on main's workflow.
-# Signing uses the same NUVIO_KEYSTORE_B64 secret as the v2.x releases,
+# Signing uses the same NUVIO_KEYSTORE_B64 secret as the v2.x/3.0 releases,
 # so builds from this workflow install OVER the Matrix on the box.
 on:
   workflow_dispatch:
   push:
-    branches: [matrix-3.0-nuvio-1.2]
+    branches: [matrix-3.1-merged-sources]
 
 # Serialize runs: two concurrent full-release builds died together when the
 # runner pool cancelled them (runs 43618067580/43618374036); queue instead.
 concurrency:
-  group: matrix-3.0-build
+  group: matrix-3.1-build
   cancel-in-progress: false
 
 permissions:
@@ -75,9 +75,9 @@ jobs:
           # are invisible to the in-app updater (unauthenticated API calls
           # never see them, and the tag is not a valid version anyway).
           # Delete the draft after the APKs are verified/downloaded.
-          TAG="matrix-3.0-draft-${{ github.run_number }}"
+          TAG="matrix-3.1-draft-${{ github.run_number }}"
           gh release create "$TAG" \
             --draft \
-            --title "Matrix 3.0 draft (CI run ${{ github.run_number }})" \
-            --notes "CI-built Matrix 3.0 release APKs. Draft only — do not publish without review." \
+            --title "Matrix 3.1 draft (CI run ${{ github.run_number }})" \
+            --notes "CI-built Matrix 3.1 release APKs. Draft only — do not publish without review." \
             app/build/outputs/apk/full/release/*.apk

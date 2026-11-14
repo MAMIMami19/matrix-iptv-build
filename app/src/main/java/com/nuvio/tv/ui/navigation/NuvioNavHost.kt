@@ -1316,6 +1316,25 @@ private fun PlaybackNavHost(
                         )
                     )
                 },
+                // Matrix 3.1: merged streams panel for an IPTV VOD title.
+                // manualSelection forces the picker (no auto-play) so the
+                // user picks a source; contentId is left unset so BACK
+                // returns to the IPTV tab instead of opening Detail.
+                onOpenMergedStreams = { videoId, contentType, title, poster, season, episode, episodeName, year ->
+                    navController.navigate(
+                        Screen.Stream.createRoute(
+                            videoId = videoId,
+                            contentType = contentType,
+                            title = title,
+                            poster = poster,
+                            season = season,
+                            episode = episode,
+                            episodeName = episodeName,
+                            year = year,
+                            manualSelection = true
+                        )
+                    )
+                },
                 onClearProgress = { keys -> iptvViewModel.clearIptvProgress(keys) }
             )
         }
