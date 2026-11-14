@@ -92,9 +92,11 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
         serverUserStateProjection.start()
         // Load locale synchronously so it's available before Activity.attachBaseContext.
         // SharedPreferences reads are fast (cached in memory after first access).
+        // Matrix default: Arabic on first run (null = never chosen); an explicit
+        // empty choice ("") still means "follow system".
         val tag = getSharedPreferences("app_locale", Context.MODE_PRIVATE)
             .getString("locale_tag", null)
-        LocaleCache.localeTag = tag ?: ""
+        LocaleCache.localeTag = tag ?: "ar"
     }
 
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)

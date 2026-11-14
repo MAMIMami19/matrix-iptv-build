@@ -91,6 +91,17 @@ object ThemeColors {
         backgroundCard = NuvioPrimitives.neutral850
     )
 
+    // Matrix brand theme: near-black #0A0A0F background, purple #A855F7 accent.
+    val Matrix = ThemeColorPalette(
+        secondary = Color(0xFFA855F7),
+        secondaryVariant = Color(0xFF9333EA),
+        focusRing = Color(0xFFC084FC),
+        focusBackground = Color(0xFF2D1A3D),
+        background = Color(0xFF0A0A0F),
+        backgroundElevated = Color(0xFF121218),
+        backgroundCard = Color(0xFF1A1A22)
+    )
+
     fun getColorPalette(
         theme: AppTheme,
         customColors: CustomThemeColors = CustomThemeColors.Default
@@ -109,6 +120,7 @@ object ThemeColors {
             AppTheme.AMBER -> Amber
             AppTheme.ROSE -> Rose
             AppTheme.WHITE -> White
+            AppTheme.MATRIX -> Matrix
         }
     }
 }
