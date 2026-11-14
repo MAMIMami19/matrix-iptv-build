@@ -1,0 +1,57 @@
+name: Build Matrix 3.0
+
+# Matrix 3.0 (NuvioTV 1.2.0 base) CI. Manual dispatch only while on the
+# rebase branch; the release-publish step lives on main's workflow.
+# Signing uses the same NUVIO_KEYSTORE_B64 secret as the v2.x releases,
+# so builds from this workflow install OVER the Matrix on the box.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Write local.properties (backend config + release signing)
+        run: |
+          echo "${{ secrets.NUVIO_KEYSTORE_B64 }}" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          {
+            echo "NUVIO_SUPABASE_URL=${{ secrets.NUVIO_SUPABASE_URL }}"
+            echo "NUVIO_SUPABASE_ANON_KEY=${{ secrets.NUVIO_SUPABASE_ANON_KEY }}"
+            echo "NUVIO_SUPABASE_FALLBACK_URL=${{ secrets.NUVIO_SUPABASE_FALLBACK_URL }}"
+            echo "NUVIO_XTREAM_SERVER=${{ secrets.NUVIO_XTREAM_SERVER }}"
+            echo "NUVIO_XTREAM_USER=${{ secrets.NUVIO_XTREAM_USER }}"
+            echo "NUVIO_XTREAM_PASS=${{ secrets.NUVIO_XTREAM_PASS }}"
+            echo "NUVIO_RELEASE_STORE_FILE=$RUNNER_TEMP/release.keystore"
+            echo "NUVIO_RELEASE_STORE_PASSWORD=${{ secrets.NUVIO_RELEASE_STORE_PASSWORD }}"
+            echo "NUVIO_RELEASE_KEY_ALIAS=${{ secrets.NUVIO_RELEASE_KEY_ALIAS }}"
+            echo "NUVIO_RELEASE_KEY_PASSWORD=${{ secrets.NUVIO_RELEASE_KEY_PASSWORD }}"
+          } > local.properties
+
+      - name: Install Android SDK 36
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Build signed Full release APKs
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleFullRelease --stacktrace --console=plain
+
+      - name: Upload release APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: matrix-3.0-release-apks
+          path: "app/build/outputs/apk/full/release/*.apk"
+          if-no-files-found: error
