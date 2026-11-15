@@ -43,9 +43,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -142,13 +149,36 @@ private fun IptvSearchField(query: String, onQueryChange: (String) -> Unit) {
     // so focus on it was invisible ("don't know where I am"). The violet
     // ring + the Search IME action (hides the keyboard, focus stays on the
     // visibly-ringed field) fix the stuck-at-search feeling.
+    //
+    // Matrix 3.2: the ring alone did not fix the trap — a focused text
+    // field swallows DPAD up/down (cursor movement), so the remote stayed
+    // stuck on the search line. Intercept the keys BEFORE the field sees
+    // them (onPreviewKeyEvent) and move focus out: DOWN to the channel
+    // list below, UP to the element above (Back button / tabs). UP from
+    // the first list row back to the field is plain focus search.
     val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
         label = { Text("Search") },
         singleLine = true,
-        modifier = Modifier.fillMaxWidth().tvFocusRing(cornerRadius = 8.dp),
+        modifier = Modifier.fillMaxWidth()
+            .onPreviewKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown &&
+                    (event.key == Key.DirectionDown || event.key == Key.DirectionUp)
+                ) {
+                    val direction = if (event.key == Key.DirectionDown) {
+                        FocusDirection.Down
+                    } else {
+                        FocusDirection.Up
+                    }
+                    focusManager.moveFocus(direction)
+                } else {
+                    false
+                }
+            }
+            .tvFocusRing(cornerRadius = 8.dp),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() }),
         trailingIcon = if (query.isNotEmpty()) {

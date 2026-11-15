@@ -56,6 +56,14 @@ import com.nuvio.tv.ui.theme.NuvioMotion
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 /**
+ * Matrix 3.2: total height of the top bar — top padding (md = 12dp) +
+ * content (36dp wordmark / nav items) + bottom padding (lg = 16dp) =
+ * 64dp. Screens with their own header content (the IPTV tabs) offset by
+ * this so nothing hides under the overlaid bar.
+ */
+val MatrixTopBarHeight = 64.dp
+
+/**
  * Matrix 3.1 — the sidebar is hidden and replaced by a Netflix-style top
  * bar carrying the same destinations (Home, Discover when enabled, Search,
  * Library, IPTV, Settings) plus the profile switcher. No destination

@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
+import com.nuvio.tv.matrix.MatrixTopBarHeight
 
 private enum class IptvTab { LiveTv, Vod, Settings }
 
@@ -55,7 +56,11 @@ fun IptvScreen(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        Row(modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp)) {
+        // Matrix 3.2: the 3.1 top bar overlays the top of every root
+        // route, and these tabs sat at top=16dp — under the bar. Offset
+        // below it (bar height + the original 16dp gap); UP from the tabs
+        // still reaches the top-bar nav.
+        Row(modifier = Modifier.padding(start = 16.dp, top = MatrixTopBarHeight + 16.dp, end = 16.dp)) {
             IptvTabButton(
                 label = "Live TV",
                 selected = selectedTab == IptvTab.LiveTv,

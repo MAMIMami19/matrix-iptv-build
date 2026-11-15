@@ -1208,6 +1208,15 @@ private fun PlaybackNavHost(
 
                         if (videoId.isBlank() || contentType.isBlank() || title.isBlank()) {
                             navController.popBackStack()
+                        } else if (videoId.startsWith("iptv:") ||
+                            args?.getString("contentId").orEmpty().startsWith("iptv:")
+                        ) {
+                            // Matrix 3.2: IPTV channels have no addon
+                            // streams, so StreamScreen can only show "no
+                            // addon supports streams for tv" — a dead
+                            // end. Back from a playback error returns to
+                            // the IPTV channel list instead.
+                            navController.popBackStack()
                         } else {
                             val route = Screen.Stream.createRoute(
                                 videoId = videoId,
