@@ -216,6 +216,7 @@ private fun TopNavLiveTvItem(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(50)
+    val liveTvLabel = stringResource(R.string.topbar_live_tv)
     val itemScale by animateFloatAsState(
         targetValue = if (isFocused) 1.06f else 1f,
         animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.fast),
@@ -248,7 +249,7 @@ private fun TopNavLiveTvItem(
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f),
     ) {
         Text(
-            text = stringResource(R.string.topbar_live_tv),
+            text = liveTvLabel,
             color = Color.White,
             style = androidx.tv.material3.MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.SemiBold,
@@ -256,7 +257,7 @@ private fun TopNavLiveTvItem(
             maxLines = 1,
             modifier = Modifier
                 .semantics {
-                    contentDescription = stringResource(R.string.topbar_live_tv)
+                    contentDescription = liveTvLabel
                     role = Role.Tab
                     this.selected = selected
                 }
