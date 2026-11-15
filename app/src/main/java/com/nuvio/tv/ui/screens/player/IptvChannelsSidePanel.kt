@@ -26,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -72,13 +74,22 @@ internal fun IptvChannelsSidePanel(
         }
     }
 
-    // Right panel only (scrim is handled in PlayerScreen)
+    // Right panel only (scrim is handled in PlayerScreen).
+    // Dark fading background: transparent at the video edge, solid dark
+    // at the outer edge (his order: "القائمة بلون داكن يتلاشا").
     Box(
         modifier = modifier
             .fillMaxHeight()
             .width(520.dp)
             .clip(RoundedCornerShape(topStart = NuvioTheme.spacing.lg, bottomStart = NuvioTheme.spacing.lg))
-            .background(NuvioTheme.colors.BackgroundElevated)
+            .background(
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        NuvioTheme.colors.BackgroundElevated
+                    )
+                )
+            )
     ) {
         Column(modifier = Modifier.padding(NuvioTheme.spacing.xl)) {
             Row(
