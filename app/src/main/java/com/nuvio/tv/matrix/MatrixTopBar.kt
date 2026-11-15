@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -173,13 +174,22 @@ private fun MatrixTopNavBar(
             )
             Spacer(modifier = Modifier.width(NuvioTheme.spacing.xl))
             drawerItems.forEach { item ->
-                TopNavItem(
-                    label = item.label,
-                    iconRes = item.iconRes,
-                    icon = item.icon,
-                    selected = selectedDrawerRoute == item.route,
-                    onClick = { onDrawerItemClick(item.route) },
-                )
+                if (item.route == Screen.Iptv.route) {
+                    // The Live TV pill: dark pill + white outline, like his
+                    // reference photo (a logo, not a plain nav item).
+                    TopNavLiveTvItem(
+                        selected = selectedDrawerRoute == item.route,
+                        onClick = { onDrawerItemClick(item.route) },
+                    )
+                } else {
+                    TopNavItem(
+                        label = item.label,
+                        iconRes = item.iconRes,
+                        icon = item.icon,
+                        selected = selectedDrawerRoute == item.route,
+                        onClick = { onDrawerItemClick(item.route) },
+                    )
+                }
                 Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
             }
             Spacer(modifier = Modifier.weight(1f))
@@ -192,6 +202,69 @@ private fun MatrixTopNavBar(
                 )
             }
         }
+    }
+}
+
+/**
+ * The Live TV pill in the top bar: a dark pill with a white outline and
+ * "Live TV" text, matching his reference photo. Opens the IPTV screen.
+ */
+@Composable
+private fun TopNavLiveTvItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(50)
+    val itemScale by animateFloatAsState(
+        targetValue = if (isFocused) 1.06f else 1f,
+        animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.fast),
+        label = "topNavLiveTvScale",
+    )
+
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .graphicsLayer {
+                scaleX = itemScale
+                scaleY = itemScale
+            }
+            .onFocusChanged { isFocused = it.hasFocus },
+        colors = CardDefaults.colors(
+            containerColor = Color.Black.copy(alpha = 0.55f),
+            focusedContainerColor = Color.Black.copy(alpha = 0.55f),
+        ),
+        border = CardDefaults.border(
+            border = androidx.tv.material3.Border(
+                border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.85f)),
+                shape = shape,
+            ),
+            focusedBorder = androidx.tv.material3.Border(
+                border = BorderStroke(2.dp, Color.White),
+                shape = shape,
+            ),
+        ),
+        shape = CardDefaults.shape(shape = shape),
+        scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f),
+    ) {
+        Text(
+            text = stringResource(R.string.topbar_live_tv),
+            color = Color.White,
+            style = androidx.tv.material3.MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+            ),
+            maxLines = 1,
+            modifier = Modifier
+                .semantics {
+                    contentDescription = stringResource(R.string.topbar_live_tv)
+                    role = Role.Tab
+                    this.selected = selected
+                }
+                .padding(
+                    horizontal = NuvioTheme.spacing.md,
+                    vertical = NuvioTheme.spacing.sm,
+                ),
+        )
     }
 }
 

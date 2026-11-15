@@ -1878,6 +1878,7 @@
     <string name="nav_search">البحث</string>
     <string name="nav_library">المكتبة</string>
     <string name="nav_iptv">IPTV</string>
+    <string name="topbar_live_tv">Live TV</string>
     <string name="nav_addons">الإضافات</string>
     <string name="nav_movies">أفلام</string>
     <string name="nav_series">مسلسلات</string>
