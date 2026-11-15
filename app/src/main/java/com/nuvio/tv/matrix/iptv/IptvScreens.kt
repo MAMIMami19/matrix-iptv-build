@@ -3,6 +3,7 @@ package com.nuvio.tv.matrix.iptv
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +46,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -133,12 +138,19 @@ private fun IptvNotConfigured() {
 
 @Composable
 private fun IptvSearchField(query: String, onQueryChange: (String) -> Unit) {
+    // TV remote: this field was the only IPTV element without a focus ring,
+    // so focus on it was invisible ("don't know where I am"). The violet
+    // ring + the Search IME action (hides the keyboard, focus stays on the
+    // visibly-ringed field) fix the stuck-at-search feeling.
+    val keyboardController = LocalSoftwareKeyboardController.current
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
         label = { Text("Search") },
         singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().tvFocusRing(cornerRadius = 8.dp),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() }),
         trailingIcon = if (query.isNotEmpty()) {
             { TextButton(onClick = { onQueryChange("") }) { Text("✕") } }
         } else {
@@ -213,7 +225,13 @@ private fun IptvChannelRow(
     onFavoriteToggle: (() -> Unit)? = null,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+        // Long-press OK on a channel toggles its favorite star (the ★ button
+        // at the row's end is hard to reach by remote); the star still works.
+        modifier = Modifier.fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = { onFavoriteToggle?.invoke() },
+            )
             .tvFocusRing(cornerRadius = 8.dp)
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
