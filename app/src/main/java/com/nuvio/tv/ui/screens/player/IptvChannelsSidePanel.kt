@@ -37,6 +37,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import coil3.compose.AsyncImage
 import com.nuvio.tv.R
 import com.nuvio.tv.matrix.iptv.IptvChannelRef
+import com.nuvio.tv.ui.theme.NuvioTheme
 import kotlinx.coroutines.delay
 
 /**
