@@ -1869,6 +1869,12 @@ fun PlayerRuntimeController.onEvent(
         PlayerEvent.OnDismissEpisodesPanel -> {
             dismissEpisodesPanel()
         }
+        PlayerEvent.OnShowChannelsPanel -> {
+            showChannelsPanel()
+        }
+        PlayerEvent.OnDismissChannelsPanel -> {
+            dismissChannelsPanel()
+        }
         PlayerEvent.OnBackFromEpisodeStreams -> {
             _uiState.update {
                 it.copy(

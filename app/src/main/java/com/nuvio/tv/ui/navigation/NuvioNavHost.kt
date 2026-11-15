@@ -1175,6 +1175,29 @@ private fun PlaybackNavHost(
                     )
                 },
                 onOpenPartyMedia = ::openPartyMedia,
+                // Matrix IPTV: switch to another channel from the in-player
+                // list — re-hand the list to the next player and replace
+                // this player with the new channel (same route shape as
+                // the IPTV tab's direct play).
+                onPlayIptvChannel = { channel, channels ->
+                    com.nuvio.tv.matrix.iptv.IptvChannelHandoff.set(channels, channel.streamId)
+                    navController.navigate(
+                        Screen.Player.createRoute(
+                            streamUrl = channel.streamUrl,
+                            title = channel.name,
+                            headers = mapOf("User-Agent" to "Mozilla/5.0"),
+                            contentId = "iptv:${channel.streamId}",
+                            contentType = "tv",
+                            contentName = channel.name,
+                            poster = channel.icon,
+                            videoId = "iptv:${channel.streamId}",
+                            startFromBeginning = true
+                        )
+                    ) {
+                        popUpTo(Screen.Player.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
                 onPlaybackErrorBack = {
                     val returnedToStream = popBackToStream()
                     if (!returnedToStream) {

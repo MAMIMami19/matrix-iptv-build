@@ -19,6 +19,7 @@ import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
+import com.nuvio.tv.matrix.iptv.IptvChannelRef
 import com.nuvio.tv.ui.components.SourceChipItem
 
 enum class PlayerExitReason {
@@ -172,6 +173,10 @@ data class PlayerUiState(
     val episodeStreamsSeason: Int? = null,
     val episodeStreamsEpisode: Int? = null,
     val episodeStreamsTitle: String? = null,
+    // Matrix IPTV channel list side panel (for live TV)
+    val showChannelsPanel: Boolean = false,
+    val iptvChannels: List<IptvChannelRef> = emptyList(),
+    val currentIptvStreamId: Int? = null,
     val showPartyPanel: Boolean = false,
     val partyBehind: Boolean = false,
     val partyBehindMs: Long? = null,
@@ -360,6 +365,8 @@ sealed class PlayerEvent {
     data object OnDismissMoreDialog : PlayerEvent()
     data object OnShowEpisodesPanel : PlayerEvent()
     data object OnDismissEpisodesPanel : PlayerEvent()
+    data object OnShowChannelsPanel : PlayerEvent()
+    data object OnDismissChannelsPanel : PlayerEvent()
     data object OnBackFromEpisodeStreams : PlayerEvent()
     data class OnEpisodeSeasonSelected(val season: Int) : PlayerEvent()
     data class OnEpisodeSelected(val video: Video, val manualSelection: Boolean = false) : PlayerEvent()

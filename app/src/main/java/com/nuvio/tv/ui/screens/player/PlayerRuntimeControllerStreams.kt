@@ -112,6 +112,7 @@ internal fun PlayerRuntimeController.showEpisodesPanel() {
     _uiState.update {
         it.copy(
             showEpisodesPanel = true,
+            showChannelsPanel = false,
             showControls = true,
             showAudioOverlay = false,
             showSubtitleOverlay = false,
@@ -127,6 +128,26 @@ internal fun PlayerRuntimeController.showEpisodesPanel() {
         selectEpisodesSeason(desiredSeason)
     } else {
         loadEpisodesIfNeeded()
+    }
+}
+
+// Matrix IPTV: open the in-player channel list. No loading needed — the
+// list arrived with the handoff before navigation.
+internal fun PlayerRuntimeController.showChannelsPanel() {
+    _uiState.update {
+        it.copy(
+            showChannelsPanel = true,
+            showControls = true,
+            showAudioOverlay = false,
+            showSubtitleOverlay = false,
+            showSubtitleStylePanel = false,
+            showSubtitleTimingDialog = false,
+            showSpeedDialog = false,
+            showMoreDialog = false,
+            showEpisodesPanel = false,
+            showEpisodeStreams = false,
+            showSourcesPanel = false
+        )
     }
 }
 
@@ -146,6 +167,7 @@ internal fun PlayerRuntimeController.showSourcesPanel() {
             showSpeedDialog = false,
             showMoreDialog = false,
             showEpisodesPanel = false,
+            showChannelsPanel = false,
             showEpisodeStreams = false
         )
     }
@@ -1098,6 +1120,13 @@ internal fun PlayerRuntimeController.dismissEpisodesPanel() {
             showEpisodeStreams = false,
             isLoadingEpisodeStreams = false
         )
+    }
+    scheduleHideControls()
+}
+
+internal fun PlayerRuntimeController.dismissChannelsPanel() {
+    _uiState.update {
+        it.copy(showChannelsPanel = false)
     }
     scheduleHideControls()
 }

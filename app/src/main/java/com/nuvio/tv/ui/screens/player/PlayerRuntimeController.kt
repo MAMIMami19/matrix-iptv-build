@@ -51,6 +51,7 @@ import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.StreamRepository
+import com.nuvio.tv.matrix.iptv.IptvChannelHandoff
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import androidx.media3.session.MediaSession
 import kotlinx.coroutines.CoroutineScope
@@ -212,6 +213,24 @@ class PlayerRuntimeController(
 
     init {
         PlayerMediaSourceFactory.vodCachePlayheadBytesProvider = vodCachePlayheadBytesProvider
+    }
+
+    // Matrix IPTV: consume the one-shot channel list handed off by the
+    // Live TV tab (the group/favorites/search list the channel was played
+    // from). Called once from the ViewModel after construction. The
+    // current channel comes from the route's contentId ("iptv:<id>") so
+    // it survives a lost handoff; without the list the Channels button
+    // simply stays hidden and playback is unaffected.
+    internal fun consumeIptvChannelHandoff() {
+        val handoff = IptvChannelHandoff.take() ?: return
+        val currentId = contentId?.removePrefix("iptv:")?.toIntOrNull()
+            ?: handoff.currentStreamId
+        _uiState.update {
+            it.copy(
+                iptvChannels = handoff.channels,
+                currentIptvStreamId = currentId,
+            )
+        }
     }
 
     // Closed on exit (stopAndRelease) or when the ViewModel is cleared, whichever comes first.

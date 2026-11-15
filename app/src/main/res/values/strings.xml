@@ -2616,6 +2616,8 @@
     <string name="cd_sources">Sources</string>
     <string name="cd_switch_player_engine">Switch player engine</string>
     <string name="cd_episodes">Episodes</string>
+    <string name="player_channels">Channels</string>
+    <string name="channels_panel_no_channels">No channels available</string>
     <string name="player_chapter_number">Chapter %1$d</string>
     <string name="player_chapters">Chapters</string>
     <string name="player_chapters_title">Chapters (%1$d)</string>

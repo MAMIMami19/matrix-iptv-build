@@ -415,10 +415,23 @@ internal fun LiveTvScreen(
         loadChannels(category)
     }
 
-    fun playChannel(channel: XtreamLiveStream) {
+    fun playChannel(channel: XtreamLiveStream, list: List<XtreamLiveStream>) {
         IptvSettingsRepository.addPlayedIptvKey(
             "iptv:${channel.streamId}",
             "iptv:${channel.streamId}",
+        )
+        // Hand the browsed list to the player so its Channels panel can
+        // offer the same list in-player.
+        IptvChannelHandoff.set(
+            list.map {
+                IptvChannelRef(
+                    it.streamId,
+                    it.name,
+                    it.streamIcon,
+                    XtreamClient.liveStreamUrl(it.streamId),
+                )
+            },
+            channel.streamId,
         )
         onPlay(
             channel.name,
@@ -431,10 +444,21 @@ internal fun LiveTvScreen(
         )
     }
 
-    fun playFavorite(fav: FavoriteChannel) {
+    fun playFavorite(fav: FavoriteChannel, list: List<FavoriteChannel>) {
         IptvSettingsRepository.addPlayedIptvKey(
             "iptv:${fav.streamId}",
             "iptv:${fav.streamId}",
+        )
+        IptvChannelHandoff.set(
+            list.map {
+                IptvChannelRef(
+                    it.streamId,
+                    it.name,
+                    it.iconUrl,
+                    XtreamClient.liveStreamUrl(it.streamId),
+                )
+            },
+            fav.streamId,
         )
         onPlay(
             fav.name,
@@ -528,7 +552,7 @@ internal fun LiveTvScreen(
                                                     infoLine = categoryNameById[channel.categoryId]
                                                         .orEmpty()
                                                         .ifBlank { "Pas d'informations" },
-                                                    onClick = { playChannel(channel) },
+                                                    onClick = { playChannel(channel, results) },
                                                     isFavorite = favorites.any {
                                                         it.streamId == channel.streamId
                                                     },
@@ -576,7 +600,7 @@ internal fun LiveTvScreen(
                                             name = fav.name,
                                             infoLine = fav.groupName.orEmpty()
                                                 .ifBlank { "Pas d'informations" },
-                                            onClick = { playFavorite(fav) },
+                                            onClick = { playFavorite(fav, visibleFavorites) },
                                             isFavorite = true,
                                             onFavoriteToggle = {
                                                 IptvSettingsRepository.toggleFavoriteChannel(fav)
@@ -694,7 +718,7 @@ internal fun LiveTvScreen(
                                 iconUrl = channel.streamIcon,
                                 name = channel.name,
                                 infoLine = "Pas d'informations",
-                                onClick = { playChannel(channel) },
+                                onClick = { playChannel(channel, shown) },
                                 isFavorite = favorites.any {
                                     it.streamId == channel.streamId
                                 },

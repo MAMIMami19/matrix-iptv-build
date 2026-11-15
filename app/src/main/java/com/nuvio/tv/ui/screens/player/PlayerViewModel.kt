@@ -158,6 +158,7 @@ class PlayerViewModel @Inject constructor(
 
     init {
         controller.bindParty()
+        controller.consumeIptvChannelHandoff()
     }
 
     val party: com.nuvio.tv.core.party.PartyRepository

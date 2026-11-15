@@ -145,6 +145,7 @@ import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.matrix.iptv.IptvChannelRef
 import com.nuvio.tv.core.party.PartyAction
 import com.nuvio.tv.core.party.PartyMedia
 import com.nuvio.tv.core.party.PartyNotice
@@ -211,7 +212,11 @@ fun PlayerScreen(
     onPlaybackEnded: ((nextVideoId: String?, nextSeason: Int?, nextEpisode: Int?, exitReason: PlayerExitReason?) -> Unit)? = null,
     onPlayRecommendation: (PostPlayRecommendation, manualSelection: Boolean) -> Unit = { _, _ -> },
     onOpenRecommendationDetails: (PostPlayRecommendation) -> Unit = {},
-    onOpenPartyMedia: (PartyMedia) -> Unit = {}
+    onOpenPartyMedia: (PartyMedia) -> Unit = {},
+    // Matrix IPTV: switch to another channel from the in-player list.
+    // Receives the selected channel + the full browsed list (re-handed
+    // to the next player so its list stays available).
+    onPlayIptvChannel: (IptvChannelRef, List<IptvChannelRef>) -> Unit = { _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val playerBadges = rememberPlayerBadges(viewModel, uiState)
@@ -237,6 +242,7 @@ fun PlayerScreen(
     val playPauseFocusRequester = remember { FocusRequester() }
     val progressBarFocusRequester = remember { FocusRequester() }
     val episodesFocusRequester = remember { FocusRequester() }
+    val channelsFocusRequester = remember { FocusRequester() }
     val chaptersFocusRequester = remember { FocusRequester() }
     val streamsFocusRequester = remember { FocusRequester() }
     val sourceStreamsFocusRequester = remember { FocusRequester() }
@@ -400,6 +406,8 @@ fun PlayerScreen(
             } else {
                 viewModel.onEvent(PlayerEvent.OnDismissEpisodesPanel)
             }
+        } else if (uiState.showChannelsPanel) {
+            viewModel.onEvent(PlayerEvent.OnDismissChannelsPanel)
         } else if (uiState.postPlayMode is PostPlayMode.AutoPlay &&
             postPlayRecommendationState.recommendation == null
         ) {
@@ -569,6 +577,7 @@ fun PlayerScreen(
     LaunchedEffect(
         uiState.showControls,
         uiState.showEpisodesPanel,
+        uiState.showChannelsPanel,
         uiState.showSourcesPanel,
         uiState.showChaptersPanel,
         uiState.showPartyPanel,
@@ -584,7 +593,7 @@ fun PlayerScreen(
         if (shouldConfirmNextEpisodeOnEnd || postPlayRecommendationState.isVisible) return@LaunchedEffect
         if (uiState.error != null) return@LaunchedEffect
         if (uiState.showPartyPanel) return@LaunchedEffect
-        if (uiState.showControls && !uiState.showEpisodesPanel && !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
+        if (uiState.showControls && !uiState.showEpisodesPanel && !uiState.showChannelsPanel && !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
             !uiState.showAudioOverlay && !uiState.showSubtitleOverlay &&
             !uiState.showSubtitleStylePanel && !uiState.showSubtitleDelayOverlay &&
             !uiState.showSubtitleTimingDialog &&
@@ -709,6 +718,7 @@ fun PlayerScreen(
                     viewModel.onEvent(PlayerEvent.OnHideSubtitleDelayOverlay)
                 } else if (
                     !uiState.showEpisodesPanel &&
+                    !uiState.showChannelsPanel &&
                     !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
                     !uiState.showPartyPanel &&
                     !uiState.showAudioOverlay &&
@@ -833,7 +843,7 @@ fun PlayerScreen(
                 }
 
                 // When a side panel or dialog is open, let it handle all keys
-                val panelOrDialogOpen = uiState.showEpisodesPanel || uiState.showSourcesPanel || uiState.showPartyPanel ||
+                val panelOrDialogOpen = uiState.showEpisodesPanel || uiState.showChannelsPanel || uiState.showSourcesPanel || uiState.showPartyPanel ||
                         uiState.showChaptersPanel ||
                         uiState.showAudioOverlay || uiState.showSubtitleOverlay ||
                         uiState.showSubtitleStylePanel || uiState.showSpeedDialog ||
@@ -1057,6 +1067,7 @@ fun PlayerScreen(
                 !uiState.showPauseOverlay &&
                 !uiState.showStreamInfoOverlay &&
                 !uiState.showEpisodesPanel &&
+                !uiState.showChannelsPanel &&
                 !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
                 !uiState.showPartyPanel &&
                 !uiState.showAudioOverlay &&
@@ -1078,6 +1089,7 @@ fun PlayerScreen(
             !uiState.showSubtitleStylePanel &&
             !uiState.showSubtitleDelayOverlay &&
             !uiState.showEpisodesPanel &&
+            !uiState.showChannelsPanel &&
             !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
             !uiState.showPartyPanel &&
             !uiState.showAudioOverlay &&
@@ -1579,6 +1591,7 @@ fun PlayerScreen(
             !uiState.showLoadingOverlay &&
             !uiState.showPauseOverlay &&
             !uiState.showEpisodesPanel &&
+            !uiState.showChannelsPanel &&
             !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
             !uiState.showPartyPanel &&
             !uiState.showAudioOverlay &&
@@ -1643,6 +1656,7 @@ fun PlayerScreen(
                 onSeekTo = { viewModel.onEvent(PlayerEvent.OnSeekTo(it)) },
                 onShowChaptersPanel = { viewModel.onEvent(PlayerEvent.OnShowChaptersPanel) },
                 onShowEpisodesPanel = { viewModel.onEvent(PlayerEvent.OnShowEpisodesPanel) },
+                onShowChannelsPanel = { viewModel.onEvent(PlayerEvent.OnShowChannelsPanel) },
                 onShowSourcesPanel = { viewModel.onEvent(PlayerEvent.OnShowSourcesPanel) },
                 onShowPartyPanel = if (partyAvailable && viewModel.canUseParty) {
                     { viewModel.onEvent(PlayerEvent.OnShowPartyPanel) }
@@ -1782,6 +1796,7 @@ fun PlayerScreen(
                 !uiState.showPauseOverlay &&
                 !uiState.showSubtitleStylePanel &&
                 !uiState.showEpisodesPanel &&
+                !uiState.showChannelsPanel &&
                 !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
                 !uiState.showPartyPanel &&
                 !uiState.showAudioOverlay &&
@@ -1908,6 +1923,46 @@ fun PlayerScreen(
                         viewModel.onEvent(PlayerEvent.OnEpisodeSelected(it, manualSelection = true))
                     },
                     onStreamSelected = { viewModel.onEvent(PlayerEvent.OnEpisodeStreamSelected(it)) },
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                )
+            }
+        }
+
+        // Matrix IPTV: channels side panel (slides in from right)
+        AnimatedVisibility(
+            visible = uiState.showChannelsPanel && uiState.error == null,
+            enter = fadeIn(animationSpec = tween(120)),
+            exit = fadeOut(animationSpec = tween(120))
+        ) {
+            // Scrim (fades in/out, no slide)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.45f))
+            )
+        }
+
+        // Panel itself (slides in from right)
+        AnimatedVisibility(
+            visible = uiState.showChannelsPanel && uiState.error == null,
+            enter = slideInHorizontally(
+                animationSpec = tween(220),
+                initialOffsetX = { it }
+            ),
+            exit = slideOutHorizontally(
+                animationSpec = tween(220),
+                targetOffsetX = { it }
+            ),
+            modifier = playerControlsDim
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                IptvChannelsSidePanel(
+                    uiState = uiState,
+                    channelsFocusRequester = channelsFocusRequester,
+                    onClose = { viewModel.onEvent(PlayerEvent.OnDismissChannelsPanel) },
+                    onChannelSelected = { channel ->
+                        onPlayIptvChannel(channel, uiState.iptvChannels)
+                    },
                     modifier = Modifier.align(Alignment.CenterEnd)
                 )
             }
@@ -2143,6 +2198,7 @@ fun PlayerScreen(
                 !uiState.showLoadingOverlay &&
                 !uiState.showPauseOverlay &&
                 !uiState.showEpisodesPanel &&
+                !uiState.showChannelsPanel &&
                 !uiState.showSourcesPanel && !uiState.showChaptersPanel &&
                 !uiState.showPartyPanel &&
                 !uiState.showAudioOverlay &&
@@ -2771,6 +2827,7 @@ private fun PlayerControlsOverlay(
     onSeekTo: (Long) -> Unit,
     onShowChaptersPanel: () -> Unit,
     onShowEpisodesPanel: () -> Unit,
+    onShowChannelsPanel: () -> Unit,
     onShowSourcesPanel: () -> Unit,
     onShowPartyPanel: (() -> Unit)?,
     partyActive: Boolean,
@@ -3068,6 +3125,19 @@ private fun PlayerControlsOverlay(
                             iconPainter = customEpisodesPainter,
                             contentDescription = stringResource(R.string.cd_episodes),
                             onClick = onShowEpisodesPanel,
+                            upFocusRequester = progressUpTarget,
+                            onDownKey = onHideControls,
+                            onFocused = onResetHideTimer
+                        )
+                    }
+
+                    // Matrix IPTV: in-player channel list (only when the
+                    // player was opened from the IPTV tab with a list).
+                    if (uiState.iptvChannels.isNotEmpty()) {
+                        ControlButton(
+                            icon = Icons.Default.LiveTv,
+                            contentDescription = stringResource(R.string.player_channels),
+                            onClick = onShowChannelsPanel,
                             upFocusRequester = progressUpTarget,
                             onDownKey = onHideControls,
                             onFocused = onResetHideTimer
