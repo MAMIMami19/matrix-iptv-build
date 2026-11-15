@@ -38,6 +38,7 @@ jobs:
             echo "NUVIO_SUPABASE_URL=${{ secrets.NUVIO_SUPABASE_URL }}"
             echo "NUVIO_SUPABASE_ANON_KEY=${{ secrets.NUVIO_SUPABASE_ANON_KEY }}"
             echo "NUVIO_SUPABASE_FALLBACK_URL=${{ secrets.NUVIO_SUPABASE_FALLBACK_URL }}"
+            echo "TMDB_API_KEY=${{ secrets.TMDB_API_KEY }}"
             echo "NUVIO_XTREAM_SERVER=${{ secrets.NUVIO_XTREAM_SERVER }}"
             echo "NUVIO_XTREAM_USER=${{ secrets.NUVIO_XTREAM_USER }}"
             echo "NUVIO_XTREAM_PASS=${{ secrets.NUVIO_XTREAM_PASS }}"
