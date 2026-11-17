@@ -8,6 +8,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -138,6 +139,20 @@ fun MatrixTopBarScaffold(
     }
 }
 
+/**
+ * Matrix 3.3 — auto-hide: the whole top bar hides by default — wordmark,
+ * nav items, Live TV button, profile switcher and gradient scrim — so
+ * the top area is clean, and everything fades in only while the bar has
+ * DPAD focus, fading out again when focus returns to the content below.
+ *
+ * The hidden items stay composed at alpha 0 — they are never removed —
+ * so they remain DPAD-focusable while invisible: pressing UP from the
+ * hero still lands on them, and focus entering the bar is what drives
+ * the fade-in ([barHasFocus] via [onFocusChanged] on the bar container).
+ *
+ * 3.3 item styles: Search is icon-only (magnifier, no text label) and
+ * Live TV is a circular button carrying the LiveTv icon.
+ */
 @Composable
 private fun MatrixTopNavBar(
     drawerItems: List<DrawerItem>,
@@ -150,15 +165,24 @@ private fun MatrixTopNavBar(
     onSwitchProfile: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Gradient scrim so the bar stays legible over the hero backdrop.
+    var barHasFocus by remember { mutableStateOf(false) }
+    val itemsAlpha by animateFloatAsState(
+        targetValue = if (barHasFocus) 1f else 0f,
+        animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.medium),
+        label = "topBarItemsAlpha",
+    )
+
+    // Gradient scrim so the bar stays legible over the hero backdrop; it
+    // fades with the items, leaving the top area clean when unfocused.
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .onFocusChanged { barHasFocus = it.hasFocus }
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color.Black.copy(alpha = 0.72f),
-                        Color.Black.copy(alpha = 0.45f),
+                        Color.Black.copy(alpha = 0.72f * itemsAlpha),
+                        Color.Black.copy(alpha = 0.45f * itemsAlpha),
                         Color.Black.copy(alpha = 0f),
                     )
                 )
@@ -174,56 +198,71 @@ private fun MatrixTopNavBar(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // The wordmark hides with everything else.
             BrandWordmark(
                 contentDescription = stringResource(R.string.app_name),
+                alpha = itemsAlpha,
                 modifier = Modifier
                     .width(132.dp)
                     .height(36.dp),
             )
             Spacer(modifier = Modifier.width(NuvioTheme.spacing.xl))
-            drawerItems.forEach { item ->
-                if (item.route == Screen.Iptv.route) {
-                    // The Live TV pill: dark pill + white outline, like his
-                    // reference photo (a logo, not a plain nav item).
-                    TopNavLiveTvItem(
-                        selected = selectedDrawerRoute == item.route,
-                        onClick = { onDrawerItemClick(item.route) },
-                    )
-                } else {
-                    TopNavItem(
-                        label = item.label,
-                        iconRes = item.iconRes,
-                        icon = item.icon,
-                        selected = selectedDrawerRoute == item.route,
-                        onClick = { onDrawerItemClick(item.route) },
-                    )
+            // Nav items + Live TV pill, faded as one group. They stay
+            // composed and focusable at alpha 0 (see the KDoc above).
+            Row(
+                modifier = Modifier.graphicsLayer { alpha = itemsAlpha },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                drawerItems.forEach { item ->
+                    if (item.route == Screen.Iptv.route) {
+                        // Live TV is a circular button with the LiveTv icon.
+                        TopNavLiveTvItem(
+                            iconRes = item.iconRes,
+                            icon = item.icon,
+                            selected = selectedDrawerRoute == item.route,
+                            onClick = { onDrawerItemClick(item.route) },
+                        )
+                    } else {
+                        TopNavItem(
+                            label = item.label,
+                            iconRes = item.iconRes,
+                            icon = item.icon,
+                            selected = selectedDrawerRoute == item.route,
+                            // Search shows the magnifier icon only, no text.
+                            iconOnly = item.route == Screen.Search.route,
+                            onClick = { onDrawerItemClick(item.route) },
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                 }
-                Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
             }
             Spacer(modifier = Modifier.weight(1f))
             if (showProfileSelector && activeProfileName.isNotEmpty()) {
-                TopNavProfileItem(
-                    profileName = activeProfileName,
-                    profileColorHex = activeProfileColorHex,
-                    profileAvatarImageUrl = activeProfileAvatarImageUrl,
-                    onClick = onSwitchProfile,
-                )
+                Box(modifier = Modifier.graphicsLayer { alpha = itemsAlpha }) {
+                    TopNavProfileItem(
+                        profileName = activeProfileName,
+                        profileColorHex = activeProfileColorHex,
+                        profileAvatarImageUrl = activeProfileAvatarImageUrl,
+                        onClick = onSwitchProfile,
+                    )
+                }
             }
         }
     }
 }
 
 /**
- * The Live TV pill in the top bar: a dark pill with a white outline and
- * "Live TV" text, matching his reference photo. Opens the IPTV screen.
+ * The Live TV button in the top bar: a dark circle with a white outline
+ * carrying the LiveTv icon (no text). Opens the IPTV screen.
  */
 @Composable
 private fun TopNavLiveTvItem(
+    iconRes: Int?,
+    icon: androidx.compose.ui.graphics.vector.ImageVector?,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(50)
     val liveTvLabel = stringResource(R.string.topbar_live_tv)
     val itemScale by animateFloatAsState(
         targetValue = if (isFocused) 1.06f else 1f,
@@ -234,11 +273,17 @@ private fun TopNavLiveTvItem(
     Card(
         onClick = onClick,
         modifier = Modifier
+            .size(44.dp)
             .graphicsLayer {
                 scaleX = itemScale
                 scaleY = itemScale
             }
-            .onFocusChanged { isFocused = it.hasFocus },
+            .onFocusChanged { isFocused = it.hasFocus }
+            .semantics {
+                contentDescription = liveTvLabel
+                role = Role.Tab
+                this.selected = selected
+            },
         colors = CardDefaults.colors(
             containerColor = Color.Black.copy(alpha = 0.55f),
             focusedContainerColor = Color.Black.copy(alpha = 0.55f),
@@ -246,34 +291,27 @@ private fun TopNavLiveTvItem(
         border = CardDefaults.border(
             border = androidx.tv.material3.Border(
                 border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.85f)),
-                shape = shape,
+                shape = CircleShape,
             ),
             focusedBorder = androidx.tv.material3.Border(
                 border = BorderStroke(2.dp, Color.White),
-                shape = shape,
+                shape = CircleShape,
             ),
         ),
-        shape = CardDefaults.shape(shape = shape),
+        shape = CardDefaults.shape(shape = CircleShape),
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f),
     ) {
-        Text(
-            text = liveTvLabel,
-            color = Color.White,
-            style = androidx.tv.material3.MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.SemiBold,
-            ),
-            maxLines = 1,
-            modifier = Modifier
-                .semantics {
-                    contentDescription = liveTvLabel
-                    role = Role.Tab
-                    this.selected = selected
-                }
-                .padding(
-                    horizontal = NuvioTheme.spacing.md,
-                    vertical = NuvioTheme.spacing.sm,
-                ),
-        )
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            DrawerItemIcon(
+                iconRes = iconRes,
+                icon = icon,
+                tint = Color.White,
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }
 
@@ -284,6 +322,7 @@ private fun TopNavItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector?,
     selected: Boolean,
     onClick: () -> Unit,
+    iconOnly: Boolean = false,
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val colors = NuvioTheme.colors
@@ -351,15 +390,17 @@ private fun TopNavItem(
                 tint = animatedContentColor,
                 modifier = Modifier.size(20.dp),
             )
-            Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
-            Text(
-                text = label,
-                color = animatedContentColor,
-                style = androidx.tv.material3.MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                ),
-                maxLines = 1,
-            )
+            if (!iconOnly) {
+                Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
+                Text(
+                    text = label,
+                    color = animatedContentColor,
+                    style = androidx.tv.material3.MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                    ),
+                    maxLines = 1,
+                )
+            }
         }
     }
 }

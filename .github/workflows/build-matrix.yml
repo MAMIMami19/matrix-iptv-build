@@ -1,20 +1,20 @@
-name: Build Matrix 3.2 Phone
+name: Build Matrix 3.3
 
-# Matrix 3.2 PHONE variant (touch-friendly). Same 3.2 code as the box
-# build plus the TouchClickBridge (taps invoke the semantics onClick
-# that DPAD would have fired — tv-material3 handles keys only).
-# The box build is untouched on the matrix-3.2-search-fix branch.
+# Matrix 3.3: top-bar auto-hide (only the "matrix" wordmark stays
+# visible; nav items, Live TV pill and profile switcher fade in only
+# while the bar has DPAD focus). Off the 3.2 phone-touch branch, so the
+# TouchClickBridge is included (harmless on the box — DPAD unchanged).
 # Signing uses the same NUVIO_KEYSTORE_B64 secret as the v2.x/3.0/3.1/3.2
-# releases, so this installs OVER the phone's Matrix 1.0.
+# releases, so this installs OVER Matrix 3.2 on box and phone.
 on:
   workflow_dispatch:
   push:
-    branches: [matrix-3.2-phone-touch]
+    branches: [matrix-3.3-topbar-autohide]
 
 # Serialize runs: two concurrent full-release builds died together when the
 # runner pool cancelled them (runs 43618067580/43618374036); queue instead.
 concurrency:
-  group: matrix-3.2-phone-build
+  group: matrix-3.3-topbar-build
   cancel-in-progress: false
 
 permissions:
@@ -78,9 +78,9 @@ jobs:
           # are invisible to the in-app updater (unauthenticated API calls
           # never see them, and the tag is not a valid version anyway).
           # Delete the draft after the APKs are verified/downloaded.
-          TAG="matrix-3.2-phone-draft-${{ github.run_number }}"
+          TAG="matrix-3.3-draft-${{ github.run_number }}"
           gh release create "$TAG" \
             --draft \
-            --title "Matrix 3.2 phone draft (CI run ${{ github.run_number }})" \
-            --notes "CI-built Matrix 3.2 PHONE (touch) release APKs. Draft only — do not publish without review." \
+            --title "Matrix 3.3 draft (CI run ${{ github.run_number }})" \
+            --notes "CI-built Matrix 3.3 release APKs (top-bar auto-hide). Draft only — do not publish without review." \
             app/build/outputs/apk/full/release/*.apk
