@@ -2631,6 +2631,11 @@
     <string name="iptv_panel_favourites">Favourites</string>
     <string name="iptv_panel_all_channels">All channels</string>
     <string name="iptv_long_press_favorite_hint">Long press OK: favourite</string>
+    <!-- Matrix 3.4: Arabic IPTV tabs + in-player groups panel -->
+    <string name="iptv_tab_vod">Movies &amp; Series</string>
+    <string name="iptv_tab_settings">Settings</string>
+    <string name="iptv_panel_groups">Groups</string>
+    <string name="iptv_panel_loading_groups">Loading groups…</string>
     <string name="player_chapter_number">Chapter %1$d</string>
     <string name="player_chapters">Chapters</string>
     <string name="player_chapters_title">Chapters (%1$d)</string>

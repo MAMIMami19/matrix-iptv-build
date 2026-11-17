@@ -689,7 +689,43 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             allHeroFallbackRows, { it.hasHeroArtwork() }, currentHeroOrder
         )
 
+        // Matrix 3.4: Trending FIRST. The user wants Trending titles in
+        // the big hero on entry (the AIOMetadata addon serves "TMDB
+        // Trending" catalogs for movie + series). A Trending row is any
+        // loaded catalog whose name/key mentions trending — detected by
+        // name so it works whichever addon serves it. It is scoped to
+        // the rows already loaded for home (ordered rows + hero-only
+        // rows), so no extra catalog fetch is needed.
+        fun CatalogRow.isTrendingRow(): Boolean {
+            val haystack = "$catalogName ${legacyKey()}"
+            return haystack.contains("trend", ignoreCase = true) ||
+                haystack.contains("رائج") || haystack.contains("ترند")
+        }
+        val trendingHeroRows = buildList {
+            addAll(orderedRows.filter { it.isTrendingRow() })
+            // Hero-only catalogs (loaded but not in catalog order) can
+            // also serve Trending.
+            val extraRows = catalogSnapshot.keys
+                .filter { it !in orderedKeySet }
+                .mapNotNull { catalogSnapshot[it] }
+            val extraFiltered = if (hideUnreleased) {
+                val today = LocalDate.now()
+                extraRows.map { it.filterReleasedItems(today) }
+            } else {
+                extraRows
+            }
+            addAll(extraFiltered.filter { it.isTrendingRow() })
+        }
+        val heroItemsFromTrending = slotShuffled(
+            trendingHeroRows, { it.hasHeroArtwork() }, currentHeroOrder
+        )
+        val fallbackHeroItemsFromTrending = slotShuffled(
+            trendingHeroRows, { true }, currentHeroOrder
+        )
+
         val computedHeroItems = when {
+            heroItemsFromTrending.isNotEmpty() -> heroItemsFromTrending
+            fallbackHeroItemsFromTrending.isNotEmpty() -> fallbackHeroItemsFromTrending
             heroItemsFromSelectedCatalogs.isNotEmpty() -> heroItemsFromSelectedCatalogs
             fallbackHeroItemsFromSelectedCatalogs.isNotEmpty() -> fallbackHeroItemsFromSelectedCatalogs
             selectedHeroCatalogSet.isNotEmpty() -> emptyList()

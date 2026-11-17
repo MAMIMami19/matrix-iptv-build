@@ -1984,6 +1984,11 @@
     <string name="iptv_panel_favourites">المفضلة</string>
     <string name="iptv_panel_all_channels">كل القنوات</string>
     <string name="iptv_long_press_favorite_hint">ضغطة مطولة: مفضلة</string>
+    <!-- Matrix 3.4: Arabic IPTV tabs + in-player groups panel -->
+    <string name="iptv_tab_vod">الأفلام والمسلسلات</string>
+    <string name="iptv_tab_settings">الإعدادات</string>
+    <string name="iptv_panel_groups">المجموعات</string>
+    <string name="iptv_panel_loading_groups">جارٍ تحميل المجموعات…</string>
     <string name="cd_playback_speed">سرعة التشغيل</string>
     <string name="cd_aspect_ratio">نسبة العرض</string>
     <string name="cd_open_external_player">فتح في مشغل خارجي</string>

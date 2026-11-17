@@ -140,6 +140,15 @@ internal object XtreamClient {
     fun cachedVodStreams(): List<XtreamVodStream>? =
         synchronized(cache) { cache["vod_all"] as? List<XtreamVodStream> }
 
+    /**
+     * Matrix 3.4: the already-cached whole live catalog, or null if it
+     * has not been loaded yet. Never fetches: the in-player panel must
+     * not trigger a full catalog download on open.
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun cachedLiveStreams(): List<XtreamLiveStream>? =
+        synchronized(cache) { cache["live_all"] as? List<XtreamLiveStream> }
+
     /** Same as [cachedVodStreams] for the whole series catalog. */
     @Suppress("UNCHECKED_CAST")
     fun cachedSeries(): List<XtreamSeries>? =

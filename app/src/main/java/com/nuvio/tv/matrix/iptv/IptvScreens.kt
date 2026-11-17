@@ -53,6 +53,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
@@ -173,31 +174,67 @@ private fun IptvSearchField(
     // them (onPreviewKeyEvent) and move focus out: DOWN to the channel
     // list below, UP to the element above (Back button / tabs). UP from
     // the first list row back to the field is plain focus search.
+    //
+    // Matrix 3.4: the 3.2 intercept was NOT enough — once the on-screen
+    // keyboard opened (focus alone opened it), DPAD DOWN never reached
+    // the app at all (the IME ate it), so focus could not leave the field
+    // until BACK dismissed the keyboard. The field now stays readOnly —
+    // focusable, but no keyboard — until the user presses OK on it, which
+    // enters edit mode and opens the keyboard. DOWN from the (readOnly)
+    // field moves straight to the channel list.
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
+    var editing by remember { mutableStateOf(false) }
+    // Show the keyboard once the field actually becomes editable (the
+    // recomposition is async, so request it from an effect, not from the
+    // key handler).
+    LaunchedEffect(editing) {
+        if (editing) keyboardController?.show()
+    }
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
         label = { Text(label) },
         singleLine = true,
+        readOnly = !editing,
         modifier = Modifier.fillMaxWidth()
+            .onFocusChanged { state ->
+                // Leaving the field always exits edit mode (and hides the
+                // keyboard if it was open).
+                if (!state.hasFocus && editing) {
+                    editing = false
+                    keyboardController?.hide()
+                }
+            }
             .onPreviewKeyEvent { event ->
-                if (event.type == KeyEventType.KeyDown &&
-                    (event.key == Key.DirectionDown || event.key == Key.DirectionUp)
-                ) {
-                    val direction = if (event.key == Key.DirectionDown) {
-                        FocusDirection.Down
-                    } else {
-                        FocusDirection.Up
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                when (event.key) {
+                    Key.DirectionCenter, Key.Enter -> {
+                        // OK on the (readOnly) field enters edit mode.
+                        if (!editing) {
+                            editing = true
+                            true
+                        } else {
+                            false
+                        }
                     }
-                    focusManager.moveFocus(direction)
-                } else {
-                    false
+                    Key.DirectionDown, Key.DirectionUp -> {
+                        val direction = if (event.key == Key.DirectionDown) {
+                            FocusDirection.Down
+                        } else {
+                            FocusDirection.Up
+                        }
+                        focusManager.moveFocus(direction)
+                    }
+                    else -> false
                 }
             }
             .tvFocusRing(cornerRadius = 8.dp),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() }),
+        keyboardActions = KeyboardActions(onSearch = {
+            keyboardController?.hide()
+            editing = false
+        }),
         trailingIcon = if (query.isNotEmpty()) {
             { TextButton(onClick = { onQueryChange("") }) { Text("✕") } }
         } else {

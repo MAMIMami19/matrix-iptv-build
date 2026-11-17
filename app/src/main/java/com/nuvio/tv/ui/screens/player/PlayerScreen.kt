@@ -907,11 +907,12 @@ fun PlayerScreen(
                             if (!uiState.showControls && !overlayButtonsCoexist) {
                                 val isLeft =
                                     keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
-                                // Matrix 3.3 — during live TV playback, DPAD
-                                // RIGHT opens the channel panel
-                                // (TiviMate-style) instead of seeking: a
-                                // live stream has no seekable timeline.
-                                if (!isLeft && uiState.iptvChannels.isNotEmpty()) {
+                                // Matrix 3.4 — during live TV playback,
+                                // DPAD LEFT and RIGHT both open the channel
+                                // panel (TiviMate-style) instead of
+                                // seeking: a live stream has no seekable
+                                // timeline. (3.3: RIGHT only.)
+                                if (uiState.iptvChannels.isNotEmpty()) {
                                     viewModel.onEvent(PlayerEvent.OnShowChannelsPanel)
                                     return@onKeyEvent true
                                 }
@@ -1970,14 +1971,17 @@ fun PlayerScreen(
                     uiState = uiState,
                     channelsFocusRequester = channelsFocusRequester,
                     onClose = { viewModel.onEvent(PlayerEvent.OnDismissChannelsPanel) },
-                    onChannelSelected = { channel ->
+                    onChannelSelected = { channel, sourceList ->
                         // Matrix 3.3 — picking the channel that is already
                         // playing just closes the panel (no pointless
                         // player replacement).
                         if (channel.streamId == uiState.currentIptvStreamId) {
                             viewModel.onEvent(PlayerEvent.OnDismissChannelsPanel)
                         } else {
-                            onPlayIptvChannel(channel, uiState.iptvChannels)
+                            // Matrix 3.4 — the next player's list is the
+                            // list the channel was picked from (group,
+                            // favorites, recents, or the browsed list).
+                            onPlayIptvChannel(channel, sourceList)
                         }
                     },
                     modifier = Modifier.align(Alignment.CenterEnd)

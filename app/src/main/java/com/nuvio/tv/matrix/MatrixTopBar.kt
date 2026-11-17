@@ -260,6 +260,9 @@ private fun MatrixTopNavBar(
 /**
  * The Live TV button in the top bar: a dark circle with a white outline
  * carrying the LiveTv icon (no text). Opens the IPTV screen.
+ *
+ * Matrix 3.4: focused state fills the circle WHITE with a black icon —
+ * the 3.3 dark-on-dark focus was invisible on the box.
  */
 @Composable
 private fun TopNavLiveTvItem(
@@ -292,7 +295,7 @@ private fun TopNavLiveTvItem(
             },
         colors = CardDefaults.colors(
             containerColor = Color.Black.copy(alpha = 0.55f),
-            focusedContainerColor = Color.Black.copy(alpha = 0.55f),
+            focusedContainerColor = Color.White,
         ),
         border = CardDefaults.border(
             border = androidx.tv.material3.Border(
@@ -314,7 +317,7 @@ private fun TopNavLiveTvItem(
             DrawerItemIcon(
                 iconRes = iconRes,
                 icon = icon,
-                tint = Color.White,
+                tint = if (isFocused) Color.Black else Color.White,
                 modifier = Modifier.size(24.dp),
             )
         }
@@ -334,7 +337,10 @@ private fun TopNavItem(
     val colors = NuvioTheme.colors
     val accentColor = NuvioTheme.palette.secondary
     val shape = RoundedCornerShape(50)
+    // Matrix 3.4: icon-only items (Search) get a solid white pill + black
+    // icon when focused — the 3.3 white-14% wash was invisible on the box.
     val backgroundColorTarget = when {
+        isFocused && iconOnly -> Color.White
         isFocused && selected -> accentColor.copy(alpha = 0.32f)
         isFocused -> Color.White.copy(alpha = 0.14f)
         selected -> accentColor.copy(alpha = 0.18f)
@@ -346,6 +352,7 @@ private fun TopNavItem(
         label = "topNavItemBackground",
     )
     val contentColorTarget = when {
+        isFocused && iconOnly -> Color.Black
         selected -> Color.White
         isFocused -> colors.TextPrimary
         else -> colors.TextSecondary

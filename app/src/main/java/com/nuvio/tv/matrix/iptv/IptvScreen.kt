@@ -22,7 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.nuvio.tv.R
 import com.nuvio.tv.matrix.MatrixTopBarHeight
 
 private enum class IptvTab { LiveTv, Vod, Settings }
@@ -67,13 +69,15 @@ fun IptvScreen(
                 onClick = { selectedTab = IptvTab.LiveTv },
                 focusRequester = initialFocus,
             )
+            // Matrix 3.4: tabs from string resources — Arabic on the box
+            // (was hardcoded French "Films & Séries" / "Réglages").
             IptvTabButton(
-                label = "Films & Séries",
+                label = stringResource(R.string.iptv_tab_vod),
                 selected = selectedTab == IptvTab.Vod,
                 onClick = { selectedTab = IptvTab.Vod },
             )
             IptvTabButton(
-                label = "Réglages",
+                label = stringResource(R.string.iptv_tab_settings),
                 selected = selectedTab == IptvTab.Settings,
                 onClick = { selectedTab = IptvTab.Settings },
             )
