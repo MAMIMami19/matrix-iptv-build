@@ -1972,6 +1972,18 @@
     <string name="cd_episodes">الحلقات</string>
     <string name="player_channels">القنوات</string>
     <string name="channels_panel_no_channels">لا توجد قنوات متاحة</string>
+    <!-- Matrix 3.3: IPTV Live TV groups + in-player channel panel -->
+    <string name="iptv_group_all">كل القنوات</string>
+    <string name="iptv_group_favorites">المفضلة</string>
+    <string name="iptv_group_recents">الأخيرة</string>
+    <string name="iptv_search_channels">ابحث في القنوات</string>
+    <string name="iptv_no_favorites_yet">لا توجد مفضلة بعد</string>
+    <string name="iptv_no_recents_yet">لا توجد قنوات شوهدت مؤخراً</string>
+    <string name="iptv_no_channels_in_group">لا توجد قنوات في هذه المجموعة</string>
+    <string name="iptv_panel_recently_watched">شوهدت مؤخراً</string>
+    <string name="iptv_panel_favourites">المفضلة</string>
+    <string name="iptv_panel_all_channels">كل القنوات</string>
+    <string name="iptv_long_press_favorite_hint">ضغطة مطولة: مفضلة</string>
     <string name="cd_playback_speed">سرعة التشغيل</string>
     <string name="cd_aspect_ratio">نسبة العرض</string>
     <string name="cd_open_external_player">فتح في مشغل خارجي</string>

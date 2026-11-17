@@ -51,7 +51,9 @@ import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.StreamRepository
+import com.nuvio.tv.matrix.iptv.FavoriteChannel
 import com.nuvio.tv.matrix.iptv.IptvChannelHandoff
+import com.nuvio.tv.matrix.iptv.IptvSettingsRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import androidx.media3.session.MediaSession
 import kotlinx.coroutines.CoroutineScope
@@ -229,6 +231,19 @@ class PlayerRuntimeController(
             it.copy(
                 iptvChannels = handoff.channels,
                 currentIptvStreamId = currentId,
+            )
+        }
+        // Matrix 3.3 — every IPTV play (Live TV tab or in-player switch)
+        // passes through here, so this is the single choke point for the
+        // "last 10 channels" recents list (TiviMate-style).
+        handoff.channels.firstOrNull { it.streamId == currentId }?.let { current ->
+            IptvSettingsRepository.recordRecentChannel(
+                FavoriteChannel(
+                    streamId = current.streamId,
+                    name = current.name,
+                    iconUrl = current.icon,
+                    groupName = current.groupName,
+                )
             )
         }
     }

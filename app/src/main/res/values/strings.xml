@@ -2619,6 +2619,18 @@
     <string name="cd_episodes">Episodes</string>
     <string name="player_channels">Channels</string>
     <string name="channels_panel_no_channels">No channels available</string>
+    <!-- Matrix 3.3: IPTV Live TV groups + in-player channel panel -->
+    <string name="iptv_group_all">All channels</string>
+    <string name="iptv_group_favorites">Favourites</string>
+    <string name="iptv_group_recents">Recent</string>
+    <string name="iptv_search_channels">Search channels</string>
+    <string name="iptv_no_favorites_yet">No favourites yet</string>
+    <string name="iptv_no_recents_yet">No recent channels</string>
+    <string name="iptv_no_channels_in_group">No channels in this group</string>
+    <string name="iptv_panel_recently_watched">Recently watched</string>
+    <string name="iptv_panel_favourites">Favourites</string>
+    <string name="iptv_panel_all_channels">All channels</string>
+    <string name="iptv_long_press_favorite_hint">Long press OK: favourite</string>
     <string name="player_chapter_number">Chapter %1$d</string>
     <string name="player_chapters">Chapters</string>
     <string name="player_chapters_title">Chapters (%1$d)</string>

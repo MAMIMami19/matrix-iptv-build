@@ -13,6 +13,8 @@ data class IptvChannelRef(
     val name: String,
     val icon: String?,
     val streamUrl: String,
+    /** Xtream group name, when known — kept so in-player favorite toggles preserve it. */
+    val groupName: String? = null,
 )
 
 /**

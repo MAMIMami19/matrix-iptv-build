@@ -17,6 +17,7 @@ internal object IptvSettingsStorage {
     private const val lockSettingsKey = "iptv_lock_settings"
     private const val iptvPinKey = "iptv_pin"
     private const val favoriteChannelsKey = "iptv_favorite_channels"
+    private const val recentChannelsKey = "iptv_recent_channels"
 
     private var preferences: SharedPreferences? = null
 
@@ -50,4 +51,7 @@ internal object IptvSettingsStorage {
     /** JSON array of favorite Live TV channels (see FavoriteChannel). */
     fun loadFavoriteChannels(): String? = loadString(favoriteChannelsKey)
     fun saveFavoriteChannels(json: String) = saveString(favoriteChannelsKey, json)
+    /** JSON array of recently watched Live TV channels, most recent first (see FavoriteChannel). */
+    fun loadRecentChannels(): String? = loadString(recentChannelsKey)
+    fun saveRecentChannels(json: String) = saveString(recentChannelsKey, json)
 }

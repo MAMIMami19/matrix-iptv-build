@@ -907,6 +907,14 @@ fun PlayerScreen(
                             if (!uiState.showControls && !overlayButtonsCoexist) {
                                 val isLeft =
                                     keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                                // Matrix 3.3 — during live TV playback, DPAD
+                                // RIGHT opens the channel panel
+                                // (TiviMate-style) instead of seeking: a
+                                // live stream has no seekable timeline.
+                                if (!isLeft && uiState.iptvChannels.isNotEmpty()) {
+                                    viewModel.onEvent(PlayerEvent.OnShowChannelsPanel)
+                                    return@onKeyEvent true
+                                }
                                 val deltaMs = PlayerScrubRates.deltaMsForKeyRepeat(
                                     repeatCount = keyEvent.nativeKeyEvent.repeatCount,
                                     forward = !isLeft
@@ -1963,7 +1971,14 @@ fun PlayerScreen(
                     channelsFocusRequester = channelsFocusRequester,
                     onClose = { viewModel.onEvent(PlayerEvent.OnDismissChannelsPanel) },
                     onChannelSelected = { channel ->
-                        onPlayIptvChannel(channel, uiState.iptvChannels)
+                        // Matrix 3.3 — picking the channel that is already
+                        // playing just closes the panel (no pointless
+                        // player replacement).
+                        if (channel.streamId == uiState.currentIptvStreamId) {
+                            viewModel.onEvent(PlayerEvent.OnDismissChannelsPanel)
+                        } else {
+                            onPlayIptvChannel(channel, uiState.iptvChannels)
+                        }
                     },
                     modifier = Modifier.align(Alignment.CenterEnd)
                 )

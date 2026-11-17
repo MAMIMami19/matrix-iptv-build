@@ -51,6 +51,17 @@ internal object IptvSettingsRepository {
     val favoriteChannels: StateFlow<List<FavoriteChannel>> =
         _favoriteChannels.asStateFlow()
 
+    /**
+     * Matrix 3.3 — recently watched Live TV channels, most recent first,
+     * capped at 10 (TiviMate-style). Same mini-record as favorites, so
+     * the recents section renders and plays without re-fetching the
+     * catalog. Recorded by the player when an IPTV channel starts.
+     */
+    const val MAX_RECENT_CHANNELS = 10
+    private val _recentChannels = MutableStateFlow<List<FavoriteChannel>>(emptyList())
+    val recentChannels: StateFlow<List<FavoriteChannel>> =
+        _recentChannels.asStateFlow()
+
     /** Session-only unlock flag: in-memory, never persisted. */
     private val _sessionUnlocked = MutableStateFlow(false)
     val sessionUnlocked: StateFlow<Boolean> = _sessionUnlocked.asStateFlow()
@@ -83,6 +94,10 @@ internal object IptvSettingsRepository {
             IptvSettingsStorage.loadFavoriteChannels()?.let { raw ->
                 runCatching { Json.decodeFromString<List<FavoriteChannel>>(raw) }.getOrNull()
             }.orEmpty()
+        _recentChannels.value =
+            IptvSettingsStorage.loadRecentChannels()?.let { raw ->
+                runCatching { Json.decodeFromString<List<FavoriteChannel>>(raw) }.getOrNull()
+            }.orEmpty().take(MAX_RECENT_CHANNELS)
     }
 
     fun setLockAdultCategories(enabled: Boolean) {
@@ -111,6 +126,17 @@ internal object IptvSettingsRepository {
         if (_pin.value == pin) return
         _pin.value = pin
         IptvSettingsStorage.saveIptvPin(pin)
+    }
+
+    /** Move [channel] to the head of the recents list (deduped, capped at 10). No-op if already first. */
+    fun recordRecentChannel(channel: FavoriteChannel) {
+        ensureLoaded()
+        val current = _recentChannels.value
+        if (current.firstOrNull()?.streamId == channel.streamId) return
+        val updated = (listOf(channel) + current.filterNot { it.streamId == channel.streamId })
+            .take(MAX_RECENT_CHANNELS)
+        _recentChannels.value = updated
+        IptvSettingsStorage.saveRecentChannels(Json.encodeToString(updated))
     }
 
     fun isFavoriteChannel(streamId: Int): Boolean =

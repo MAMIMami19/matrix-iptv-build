@@ -140,15 +140,21 @@ fun MatrixTopBarScaffold(
 }
 
 /**
- * Matrix 3.3 — auto-hide: the whole top bar hides by default — wordmark,
- * nav items, Live TV button, profile switcher and gradient scrim — so
- * the top area is clean, and everything fades in only while the bar has
- * DPAD focus, fading out again when focus returns to the content below.
+ * Matrix 3.3 — auto-hide: the top bar hides by default — wordmark, nav
+ * items, Live TV button and gradient scrim — and everything fades in
+ * only while the bar has DPAD focus, fading out again when focus
+ * returns to the content below.
  *
  * The hidden items stay composed at alpha 0 — they are never removed —
  * so they remain DPAD-focusable while invisible: pressing UP from the
  * hero still lands on them, and focus entering the bar is what drives
  * the fade-in ([barHasFocus] via [onFocusChanged] on the bar container).
+ *
+ * One exception: the profile avatar circle stays ALWAYS visible in its
+ * corner — it is the single persistent element on screen, with no text
+ * label beside it. It stays focusable, and focusing it reveals the
+ * full bar (it is a descendant of the bar container, so focus entering
+ * it sets [barHasFocus]).
  *
  * 3.3 item styles: Search is icon-only (magnifier, no text label) and
  * Live TV is a circular button carrying the LiveTv icon.
@@ -237,15 +243,15 @@ private fun MatrixTopNavBar(
                 }
             }
             Spacer(modifier = Modifier.weight(1f))
+            // The avatar circle is the one element that never hides: it
+            // stays visible (no alpha) in its corner at all times.
             if (showProfileSelector && activeProfileName.isNotEmpty()) {
-                Box(modifier = Modifier.graphicsLayer { alpha = itemsAlpha }) {
-                    TopNavProfileItem(
-                        profileName = activeProfileName,
-                        profileColorHex = activeProfileColorHex,
-                        profileAvatarImageUrl = activeProfileAvatarImageUrl,
-                        onClick = onSwitchProfile,
-                    )
-                }
+                TopNavProfileItem(
+                    profileName = activeProfileName,
+                    profileColorHex = activeProfileColorHex,
+                    profileAvatarImageUrl = activeProfileAvatarImageUrl,
+                    onClick = onSwitchProfile,
+                )
             }
         }
     }
@@ -405,6 +411,14 @@ private fun TopNavItem(
     }
 }
 
+/**
+ * Matrix 3.3 — the profile switcher is ONLY the avatar circle (profile
+ * picture, or the initial letter when there is none). No text label
+ * beside it, in either bar state. The circle never hides: it is the
+ * single persistent top-bar element, and focusing it reveals the bar.
+ * A white ring marks focus, since the avatar fills the whole circle
+ * and a background tint would not show.
+ */
 @Composable
 private fun TopNavProfileItem(
     profileName: String,
@@ -413,12 +427,6 @@ private fun TopNavProfileItem(
     onClick: () -> Unit,
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(50)
-    val backgroundColor = if (isFocused) {
-        Color.White.copy(alpha = 0.14f)
-    } else {
-        Color.Transparent
-    }
     val itemScale by animateFloatAsState(
         targetValue = if (isFocused) 1.06f else 1f,
         animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.fast),
@@ -428,30 +436,33 @@ private fun TopNavProfileItem(
     Card(
         onClick = onClick,
         modifier = Modifier
+            .size(40.dp)
             .graphicsLayer {
                 scaleX = itemScale
                 scaleY = itemScale
             }
-            .onFocusChanged { isFocused = it.hasFocus },
+            .onFocusChanged { isFocused = it.hasFocus }
+            .semantics {
+                contentDescription = profileName
+                role = Role.Button
+            },
         colors = CardDefaults.colors(
-            containerColor = backgroundColor,
-            focusedContainerColor = backgroundColor,
+            containerColor = Color.Transparent,
+            focusedContainerColor = Color.Transparent,
         ),
-        border = CardDefaults.border(border = androidx.tv.material3.Border.None),
-        shape = CardDefaults.shape(shape = shape),
+        border = CardDefaults.border(
+            border = androidx.tv.material3.Border.None,
+            focusedBorder = androidx.tv.material3.Border(
+                border = BorderStroke(2.dp, Color.White),
+                shape = CircleShape,
+            ),
+        ),
+        shape = CardDefaults.shape(shape = CircleShape),
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f),
     ) {
-        Row(
-            modifier = Modifier
-                .semantics {
-                    contentDescription = profileName
-                    role = Role.Button
-                }
-                .padding(
-                    horizontal = NuvioTheme.spacing.md,
-                    vertical = NuvioTheme.spacing.xs,
-                ),
-            verticalAlignment = Alignment.CenterVertically,
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
         ) {
             ProfileAvatarCircle(
                 name = profileName,
@@ -459,15 +470,6 @@ private fun TopNavProfileItem(
                 size = 36.dp,
                 avatarImageUrl = profileAvatarImageUrl,
                 imageCrossfade = false,
-            )
-            Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
-            Text(
-                text = profileName,
-                color = NuvioTheme.colors.TextPrimary,
-                style = androidx.tv.material3.MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.SemiBold,
-                ),
-                maxLines = 1,
             )
         }
     }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,11 +23,17 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -46,6 +53,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -54,21 +63,25 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.nuvio.tv.R
+import com.nuvio.tv.ui.theme.NuvioTheme
 import kotlinx.coroutines.launch
 
 /**
  * Play callback: title, stream id, resolved stream URL, content type
  * ("tv", "movie", "series"), poster URL, season and episode (series only).
  *
- * Note vs the 0.6.3-based Matrix build: the old in-player IPTV playlist has
- * no equivalent in the 1.2.0 player, so playback is a single stream (no
- * channel list inside the player). The player still gets the standard
- * metadata (contentId "iptv:<id>") so Continue Watching works.
+ * Live TV plays hand the shown list to the player via
+ * [IptvChannelHandoff] so its Channels panel offers the same list
+ * in-player. The player gets the standard metadata (contentId
+ * "iptv:<id>") so Continue Watching works.
  */
 internal typealias XtreamPlayHandler = (
     title: String,
@@ -144,7 +157,11 @@ private fun IptvNotConfigured() {
 }
 
 @Composable
-private fun IptvSearchField(query: String, onQueryChange: (String) -> Unit) {
+private fun IptvSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    label: String = "Search",
+) {
     // TV remote: this field was the only IPTV element without a focus ring,
     // so focus on it was invisible ("don't know where I am"). The violet
     // ring + the Search IME action (hides the keyboard, focus stays on the
@@ -161,7 +178,7 @@ private fun IptvSearchField(query: String, onQueryChange: (String) -> Unit) {
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
-        label = { Text("Search") },
+        label = { Text(label) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
             .onPreviewKeyEvent { event ->
@@ -312,36 +329,60 @@ private fun IptvChannelRow(
     }
 }
 
-@Composable
-private fun IptvChip(
-    label: String,
-    onClick: () -> Unit,
-    focusRequester: FocusRequester? = null,
-) {
-    Box(
-        modifier = Modifier.padding(end = 8.dp)
-            .clip(RoundedCornerShape(50))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(onClick = onClick)
-            .then(
-                if (focusRequester != null) {
-                    Modifier.focusRequester(focusRequester)
-                } else {
-                    Modifier
-                },
-            )
-            .tvFocusRing(cornerRadius = 50.dp)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-    ) {
-        Text(
-            text = label,
-            maxLines = 1,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    }
+/**
+ * Matrix 3.3 — TiviMate-style Live TV groups. The rail offers the whole
+ * catalog, favorites and recents first, then the Xtream groups.
+ */
+private sealed interface LiveTvGroup {
+    data object All : LiveTvGroup
+    data object Favorites : LiveTvGroup
+    data object Recents : LiveTvGroup
+    data class Category(val category: XtreamCategory) : LiveTvGroup
 }
 
+/**
+ * One row in the channel list, normalized from Xtream streams, favorites
+ * and recents so the list, the handoff and playback all share one shape.
+ */
+private data class LiveTvRowItem(
+    val streamId: Int,
+    val name: String,
+    val iconUrl: String?,
+    val groupName: String?,
+    val isFavorite: Boolean,
+)
+
+private fun XtreamLiveStream.toRowItem(
+    categoryNameById: Map<String, String>,
+    favorites: List<FavoriteChannel>,
+): LiveTvRowItem = LiveTvRowItem(
+    streamId = streamId,
+    name = name,
+    iconUrl = streamIcon,
+    groupName = categoryNameById[categoryId],
+    isFavorite = favorites.any { it.streamId == streamId },
+)
+
+private fun FavoriteChannel.toRowItem(isFavorite: Boolean): LiveTvRowItem =
+    LiveTvRowItem(
+        streamId = streamId,
+        name = name,
+        iconUrl = iconUrl,
+        groupName = groupName,
+        isFavorite = isFavorite,
+    )
+
+/**
+ * Matrix 3.3 — the Live TV tab, rebuilt TiviMate-style: a two-pane layout.
+ * The groups rail (All channels, Favorites, Recents, then the Xtream
+ * groups with counts) sits on the starting side; the selected group's
+ * channels fill the rest, with number, logo, name and favorite star.
+ * Group channels come from the already-loaded whole catalog when it is
+ * available (instant switching), otherwise from a per-group fetch cached
+ * for the session. OK plays, long-press OK toggles the favorite star.
+ * BACK clears an active search; otherwise it propagates to the root
+ * exit flow.
+ */
 @Composable
 internal fun LiveTvScreen(
     modifier: Modifier = Modifier,
@@ -353,7 +394,7 @@ internal fun LiveTvScreen(
     val lockAdult by IptvSettingsRepository.lockAdultCategories.collectAsState()
     val needsPin = pin.isNotEmpty() && !sessionUnlocked
     val adultHidden = lockAdult && !sessionUnlocked
-    // TV remote (DPAD): focus the first group chip when this tab becomes active.
+    // TV remote (DPAD): focus the first rail item when this tab becomes active.
     val initialFocus = rememberTvInitialFocus()
 
     if (!XtreamConfig.isConfigured) {
@@ -378,26 +419,28 @@ internal fun LiveTvScreen(
     }
 
     var categories by remember { mutableStateOf<List<XtreamCategory>?>(null) }
-    var selected by remember { mutableStateOf<XtreamCategory?>(null) }
-    var channels by remember { mutableStateOf<List<XtreamLiveStream>?>(null) }
+    var selectedGroup by remember { mutableStateOf<LiveTvGroup>(LiveTvGroup.All) }
     var query by remember { mutableStateOf("") }
-    var globalQuery by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
     var failed by remember { mutableStateOf(false) }
-    // Full catalog, loaded once in the background: powers the header total,
-    // the per-group count badges and the global search. Null while loading;
-    // a failure leaves it null (counts/search stay unavailable, never guessed).
+    // Full catalog, loaded once in the background: powers the "All
+    // channels" group, the per-group count badges and instant group
+    // switching. Null while loading; a failure leaves it null (group
+    // channels then come from per-group fetches, never guessed).
     var allChannels by remember { mutableStateOf<List<XtreamLiveStream>?>(null) }
     var allChannelsFailed by remember { mutableStateOf(false) }
+    // Per-group fetch cache, used only before the whole catalog arrives.
+    val groupCache = remember { mutableStateMapOf<String, List<XtreamLiveStream>>() }
+    var groupLoading by remember { mutableStateOf(false) }
+    var groupFailed by remember { mutableStateOf(false) }
     val favorites by IptvSettingsRepository.favoriteChannels.collectAsState()
+    val recents by IptvSettingsRepository.recentChannels.collectAsState()
     val scope = rememberCoroutineScope()
+    val channelListState = rememberLazyListState()
 
-    // TV remote BACK inside a group returns to the group list.
-    BackHandler(enabled = selected != null) {
-        selected = null
-        channels = null
+    // TV remote BACK clears an active search instead of leaving the tab.
+    BackHandler(enabled = query.isNotBlank()) {
         query = ""
-        globalQuery = ""
     }
 
     fun loadCategories() {
@@ -424,61 +467,27 @@ internal fun LiveTvScreen(
         }
     }
 
-    fun loadChannels(category: XtreamCategory) {
+    fun loadGroupChannels(category: XtreamCategory, force: Boolean = false) {
+        if (!force && groupCache.containsKey(category.categoryId)) return
         scope.launch {
-            loading = true
-            failed = false
+            groupLoading = true
+            groupFailed = false
             try {
-                channels = XtreamClient.liveStreams(category.categoryId)
+                groupCache[category.categoryId] = XtreamClient.liveStreams(category.categoryId)
             } catch (_: Exception) {
-                failed = true
+                groupFailed = true
             }
-            loading = false
+            groupLoading = false
         }
     }
 
-    fun selectGroup(category: XtreamCategory) {
-        selected = category
-        channels = null
-        query = ""
-        globalQuery = ""
-        loadChannels(category)
-    }
-
-    fun playChannel(channel: XtreamLiveStream, list: List<XtreamLiveStream>) {
+    fun playRowItem(item: LiveTvRowItem, list: List<LiveTvRowItem>) {
         IptvSettingsRepository.addPlayedIptvKey(
-            "iptv:${channel.streamId}",
-            "iptv:${channel.streamId}",
+            "iptv:${item.streamId}",
+            "iptv:${item.streamId}",
         )
-        // Hand the browsed list to the player so its Channels panel can
+        // Hand the shown list to the player so its Channels panel can
         // offer the same list in-player.
-        IptvChannelHandoff.set(
-            list.map {
-                IptvChannelRef(
-                    it.streamId,
-                    it.name,
-                    it.streamIcon,
-                    XtreamClient.liveStreamUrl(it.streamId),
-                )
-            },
-            channel.streamId,
-        )
-        onPlay(
-            channel.name,
-            channel.streamId,
-            XtreamClient.liveStreamUrl(channel.streamId),
-            "tv",
-            channel.streamIcon,
-            null,
-            null,
-        )
-    }
-
-    fun playFavorite(fav: FavoriteChannel, list: List<FavoriteChannel>) {
-        IptvSettingsRepository.addPlayedIptvKey(
-            "iptv:${fav.streamId}",
-            "iptv:${fav.streamId}",
-        )
         IptvChannelHandoff.set(
             list.map {
                 IptvChannelRef(
@@ -486,18 +495,30 @@ internal fun LiveTvScreen(
                     it.name,
                     it.iconUrl,
                     XtreamClient.liveStreamUrl(it.streamId),
+                    it.groupName,
                 )
             },
-            fav.streamId,
+            item.streamId,
         )
         onPlay(
-            fav.name,
-            fav.streamId,
-            XtreamClient.liveStreamUrl(fav.streamId),
+            item.name,
+            item.streamId,
+            XtreamClient.liveStreamUrl(item.streamId),
             "tv",
-            fav.iconUrl,
+            item.iconUrl,
             null,
             null,
+        )
+    }
+
+    fun toggleFavorite(item: LiveTvRowItem) {
+        IptvSettingsRepository.toggleFavoriteChannel(
+            FavoriteChannel(
+                streamId = item.streamId,
+                name = item.name,
+                iconUrl = item.iconUrl,
+                groupName = item.groupName,
+            ),
         )
     }
 
@@ -506,268 +527,358 @@ internal fun LiveTvScreen(
         loadAllChannels()
     }
 
+    // Fetch the selected group's channels when the whole catalog is not
+    // available yet (and the group is not already cached).
+    val selectedCategory = (selectedGroup as? LiveTvGroup.Category)?.category
+    LaunchedEffect(selectedCategory, allChannels) {
+        val category = selectedCategory ?: return@LaunchedEffect
+        if (allChannels == null && !groupCache.containsKey(category.categoryId)) {
+            loadGroupChannels(category)
+        }
+    }
+
+    // Back to the top whenever the group changes.
+    LaunchedEffect(selectedGroup) {
+        channelListState.scrollToItem(0)
+    }
+
     val categoryNameById = categories.orEmpty()
         .associate { it.categoryId to it.categoryName }
+    val isAdultGroup: (String?) -> Boolean = { groupName ->
+        adultHidden && groupName != null &&
+            IptvSettingsRepository.isAdultCategory(groupName)
+    }
+    val visibleFavorites = favorites.filterNot { isAdultGroup(it.groupName) }
+    val visibleRecents = recents.filterNot { isAdultGroup(it.groupName) }
+    val visibleCategories = categories.orEmpty()
+        .filterNot { isAdultGroup(it.categoryName) }
+    val groupCounts: Map<String, Int>? = allChannels
+        ?.groupBy { it.categoryId ?: "" }
+        ?.mapValues { (_, items) -> items.size }
+
+    // The rows for the selected group, before the search filter. Null
+    // while the group's channels are still loading.
+    val groupRows: List<LiveTvRowItem>? = when (val group = selectedGroup) {
+        LiveTvGroup.All -> allChannels?.map { it.toRowItem(categoryNameById, favorites) }
+        LiveTvGroup.Favorites -> visibleFavorites.map { it.toRowItem(isFavorite = true) }
+        LiveTvGroup.Recents -> visibleRecents.map {
+            it.toRowItem(isFavorite = favorites.any { fav -> fav.streamId == it.streamId })
+        }
+        is LiveTvGroup.Category -> {
+            val streams = allChannels?.filter { it.categoryId == group.category.categoryId }
+                ?: groupCache[group.category.categoryId]
+            streams?.map { it.toRowItem(categoryNameById, favorites) }
+        }
+    }
+    val shownRows = groupRows.orEmpty().filter {
+        query.isBlank() || it.name.contains(query, ignoreCase = true)
+    }
+    val groupTitle = when (val group = selectedGroup) {
+        LiveTvGroup.All -> stringResource(R.string.iptv_group_all)
+        LiveTvGroup.Favorites -> stringResource(R.string.iptv_group_favorites)
+        LiveTvGroup.Recents -> stringResource(R.string.iptv_group_recents)
+        is LiveTvGroup.Category -> group.category.categoryName
+    }
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         Text(
             "Live TV",
             style = MaterialTheme.typography.titleLarge,
-        )
-        Text(
-            text = if (allChannels != null) {
-                "${allChannels!!.size} channels"
-            } else {
-                "… channels"
-            },
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = NuvioTheme.colors.TextPrimary,
         )
         Spacer(modifier = Modifier.height(12.dp))
         when {
             loading -> IptvLoading()
-            failed -> IptvError(onRetry = {
-                val current = selected
-                if (current == null) loadCategories() else loadChannels(current)
-            })
-            selected == null -> {
-                val list = categories.orEmpty()
-                    .filterNot { adultHidden && IptvSettingsRepository.isAdultCategory(it.categoryName) }
-                val groupCounts: Map<String, Int>? = allChannels
-                    ?.groupBy { it.categoryId ?: "" }
-                    ?.mapValues { (_, items) -> items.size }
-                val visibleFavorites = favorites.filterNot {
-                    adultHidden && it.groupName != null &&
-                        IptvSettingsRepository.isAdultCategory(it.groupName)
-                }
-                if (list.isEmpty() && globalQuery.isBlank()) {
-                    IptvEmpty(message = "No channels found", onRetry = { loadCategories() })
-                } else {
-                    Column(modifier = Modifier.weight(1f)) {
+            failed -> IptvError(onRetry = ::loadCategories)
+            else -> {
+                Row(modifier = Modifier.weight(1f)) {
+                    // Groups rail (starting side — right in RTL).
+                    LazyColumn(
+                        modifier = Modifier.width(340.dp).fillMaxHeight(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        item(key = "group-all") {
+                            LiveTvGroupRailItem(
+                                label = stringResource(R.string.iptv_group_all),
+                                icon = Icons.Default.LiveTv,
+                                count = allChannels?.size,
+                                selected = selectedGroup == LiveTvGroup.All,
+                                onClick = { selectedGroup = LiveTvGroup.All; query = "" },
+                                focusRequester = initialFocus,
+                            )
+                        }
+                        item(key = "group-favorites") {
+                            LiveTvGroupRailItem(
+                                label = stringResource(R.string.iptv_group_favorites),
+                                icon = Icons.Default.Star,
+                                count = visibleFavorites.size,
+                                selected = selectedGroup == LiveTvGroup.Favorites,
+                                onClick = { selectedGroup = LiveTvGroup.Favorites; query = "" },
+                            )
+                        }
+                        item(key = "group-recents") {
+                            LiveTvGroupRailItem(
+                                label = stringResource(R.string.iptv_group_recents),
+                                icon = Icons.Default.History,
+                                count = visibleRecents.size,
+                                selected = selectedGroup == LiveTvGroup.Recents,
+                                onClick = { selectedGroup = LiveTvGroup.Recents; query = "" },
+                            )
+                        }
+                        items(visibleCategories, key = { it.categoryId }) { category ->
+                            LiveTvGroupRailItem(
+                                label = category.categoryName,
+                                icon = null,
+                                count = groupCounts?.get(category.categoryId)
+                                    ?: groupCache[category.categoryId]?.size,
+                                selected = selectedGroup == LiveTvGroup.Category(category),
+                                onClick = {
+                                    selectedGroup = LiveTvGroup.Category(category)
+                                    query = ""
+                                },
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    // Channel pane.
+                    Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                         IptvSearchField(
-                            query = globalQuery,
-                            onQueryChange = { globalQuery = it },
+                            query = query,
+                            onQueryChange = { query = it },
+                            label = stringResource(R.string.iptv_search_channels),
                         )
-                        if (globalQuery.isNotBlank()) {
-                            when {
-                                allChannels == null && !allChannelsFailed -> Box(
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = groupTitle,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = NuvioTheme.colors.TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (groupRows != null) {
+                                Box(
+                                    modifier = Modifier.clip(RoundedCornerShape(50))
+                                        .background(NuvioTheme.colors.BackgroundCard)
+                                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                                ) {
+                                    Text(
+                                        text = groupRows.size.toString(),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = NuvioTheme.colors.TextPrimary,
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        when {
+                            groupRows == null && groupLoading -> Box(
+                                modifier = Modifier.fillMaxWidth().weight(1f),
+                                contentAlignment = Alignment.Center,
+                            ) { CircularProgressIndicator() }
+                            groupRows == null && groupFailed -> Column {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    "Failed to load",
+                                    color = NuvioTheme.colors.TextPrimary,
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(
+                                    onClick = {
+                                        selectedCategory?.let { loadGroupChannels(it, force = true) }
+                                    },
+                                ) { Text("Retry") }
+                            }
+                            groupRows == null -> Box(
+                                modifier = Modifier.fillMaxWidth().weight(1f),
+                                contentAlignment = Alignment.Center,
+                            ) { CircularProgressIndicator() }
+                            shownRows.isEmpty() -> {
+                                val message = if (query.isNotBlank()) {
+                                    "No results"
+                                } else when (selectedGroup) {
+                                    LiveTvGroup.Favorites -> stringResource(R.string.iptv_no_favorites_yet)
+                                    LiveTvGroup.Recents -> stringResource(R.string.iptv_no_recents_yet)
+                                    else -> stringResource(R.string.iptv_no_channels_in_group)
+                                }
+                                Box(
                                     modifier = Modifier.fillMaxWidth().weight(1f),
                                     contentAlignment = Alignment.Center,
-                                ) { CircularProgressIndicator() }
-                                allChannelsFailed -> Column {
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text("Failed to load")
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Button(
-                                        onClick = {
-                                            allChannelsFailed = false
-                                            loadAllChannels()
-                                        },
-                                    ) { Text("Retry") }
-                                }
-                                else -> {
-                                    val results = allChannels.orEmpty().filter { channel ->
-                                        channel.name.contains(globalQuery, ignoreCase = true) &&
-                                            !(adultHidden && categoryNameById[channel.categoryId]
-                                                ?.let { IptvSettingsRepository.isAdultCategory(it) } == true)
-                                    }
-                                    if (results.isEmpty()) {
-                                        Text("No results")
-                                    } else {
-                                        LazyColumn(modifier = Modifier.weight(1f)) {
-                                            items(results, key = { it.streamId }) { channel ->
-                                                IptvChannelRow(
-                                                    iconUrl = channel.streamIcon,
-                                                    name = channel.name,
-                                                    infoLine = categoryNameById[channel.categoryId]
-                                                        .orEmpty()
-                                                        .ifBlank { "Pas d'informations" },
-                                                    onClick = { playChannel(channel, results) },
-                                                    isFavorite = favorites.any {
-                                                        it.streamId == channel.streamId
-                                                    },
-                                                    onFavoriteToggle = {
-                                                        IptvSettingsRepository.toggleFavoriteChannel(
-                                                            FavoriteChannel(
-                                                                streamId = channel.streamId,
-                                                                name = channel.name,
-                                                                iconUrl = channel.streamIcon,
-                                                                groupName = categoryNameById[channel.categoryId],
-                                                            ),
-                                                        )
-                                                    },
-                                                )
-                                            }
-                                        }
-                                    }
+                                ) {
+                                    Text(
+                                        message,
+                                        color = NuvioTheme.colors.TextSecondary,
+                                    )
                                 }
                             }
-                        } else {
-                            LazyColumn(modifier = Modifier.weight(1f)) {
-                                item(key = "fav-header") {
-                                    Text(
-                                        text = "Favoris",
-                                        style = MaterialTheme.typography.titleMedium,
+                            else -> LazyColumn(
+                                state = channelListState,
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                itemsIndexed(shownRows, key = { _, item -> item.streamId }) { index, item ->
+                                    LiveTvChannelRow(
+                                        number = index + 1,
+                                        item = item,
+                                        onClick = { playRowItem(item, shownRows) },
+                                        onFavoriteToggle = { toggleFavorite(item) },
                                     )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                }
-                                if (visibleFavorites.isEmpty()) {
-                                    item(key = "fav-empty") {
-                                        Text(
-                                            text = "No favorites yet",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                    }
-                                } else {
-                                    items(
-                                        visibleFavorites,
-                                        key = { "fav-${it.streamId}" },
-                                    ) { fav ->
-                                        IptvChannelRow(
-                                            iconUrl = fav.iconUrl,
-                                            name = fav.name,
-                                            infoLine = fav.groupName.orEmpty()
-                                                .ifBlank { "Pas d'informations" },
-                                            onClick = { playFavorite(fav, visibleFavorites) },
-                                            isFavorite = true,
-                                            onFavoriteToggle = {
-                                                IptvSettingsRepository.toggleFavoriteChannel(fav)
-                                            },
-                                        )
-                                    }
-                                    item(key = "fav-spacer") {
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                    }
-                                }
-                                item(key = "groupes-header") {
-                                    Text(
-                                        text = "Groupes",
-                                        style = MaterialTheme.typography.titleMedium,
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    LazyRow {
-                                        itemsIndexed(list, key = { _, it -> it.categoryId }) { chipIndex, category ->
-                                            IptvChip(
-                                                label = category.categoryName,
-                                                onClick = { selectGroup(category) },
-                                                focusRequester = if (chipIndex == 0) initialFocus else null,
-                                            )
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        text = "Mes Groupes",
-                                        style = MaterialTheme.typography.titleMedium,
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                }
-                                items(list, key = { it.categoryId }) { category ->
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth()
-                                            .clickable { selectGroup(category) }
-                                            .tvFocusRing(cornerRadius = 8.dp)
-                                            .padding(vertical = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Text(
-                                            text = category.categoryName,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.weight(1f),
-                                        )
-                                        groupCounts?.get(category.categoryId)?.let { count ->
-                                            Box(
-                                                modifier = Modifier.clip(RoundedCornerShape(50))
-                                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                                                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                                            ) {
-                                                Text(
-                                                    text = count.toString(),
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    color = MaterialTheme.colorScheme.onSurface,
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                        }
-                                        Text(
-                                            text = ">",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
                                 }
                             }
-                        }
-                    }
-                }
-            }
-            else -> {
-                val category = selected!!
-                TextButton(
-                    onClick = { selected = null; channels = null; query = ""; globalQuery = "" },
-                ) {
-                    Text("Back")
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = category.categoryName,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f),
-                    )
-                    val count = channels?.size
-                    if (count != null) {
-                        Box(
-                            modifier = Modifier.clip(RoundedCornerShape(50))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .padding(horizontal = 12.dp, vertical = 4.dp),
-                        ) {
-                            Text(
-                                text = count.toString(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                IptvSearchField(query = query, onQueryChange = { query = it })
-                val shown = channels.orEmpty().filter {
-                    query.isBlank() || it.name.contains(query, ignoreCase = true)
-                }
-                if (shown.isEmpty() && query.isBlank()) {
-                    IptvEmpty(message = "No channels found", onRetry = { loadChannels(category) })
-                } else if (shown.isEmpty()) {
-                    Text("No results")
-                } else {
-                    LazyColumn(modifier = Modifier.weight(1f)) {
-                        items(shown, key = { it.streamId }) { channel ->
-                            IptvChannelRow(
-                                iconUrl = channel.streamIcon,
-                                name = channel.name,
-                                infoLine = "Pas d'informations",
-                                onClick = { playChannel(channel, shown) },
-                                isFavorite = favorites.any {
-                                    it.streamId == channel.streamId
-                                },
-                                onFavoriteToggle = {
-                                    IptvSettingsRepository.toggleFavoriteChannel(
-                                        FavoriteChannel(
-                                            streamId = channel.streamId,
-                                            name = channel.name,
-                                            iconUrl = channel.streamIcon,
-                                            groupName = category.categoryName,
-                                        ),
-                                    )
-                                },
-                            )
                         }
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * One group in the Live TV rail: optional icon, name and a count badge.
+ * The selected group gets the violet accent treatment.
+ */
+@Composable
+private fun LiveTvGroupRailItem(
+    label: String,
+    icon: ImageVector?,
+    count: Int?,
+    selected: Boolean,
+    onClick: () -> Unit,
+    focusRequester: FocusRequester? = null,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (selected) NuvioTheme.colors.Secondary.copy(alpha = 0.22f)
+                else Color.Transparent,
+            )
+            .clickable(onClick = onClick)
+            .then(
+                if (focusRequester != null) Modifier.focusRequester(focusRequester)
+                else Modifier,
+            )
+            .tvFocusRing(cornerRadius = 12.dp)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (selected) Color.White else NuvioTheme.colors.TextSecondary,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+        }
+        Text(
+            text = label,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            ),
+            color = if (selected) Color.White else NuvioTheme.colors.TextPrimary,
+            modifier = Modifier.weight(1f),
+        )
+        if (count != null) {
+            Box(
+                modifier = Modifier.clip(RoundedCornerShape(50))
+                    .background(
+                        if (selected) NuvioTheme.colors.Secondary
+                        else NuvioTheme.colors.BackgroundCard,
+                    )
+                    .padding(horizontal = 10.dp, vertical = 2.dp),
+            ) {
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (selected) Color.White else NuvioTheme.colors.TextSecondary,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * One channel in the Live TV list: TiviMate-style number, logo, name,
+ * group line and favorite star. OK plays; long-press OK toggles the
+ * favorite star (the star itself is an indicator, not a focus target,
+ * so DPAD up/down never gets stuck on it).
+ */
+@Composable
+private fun LiveTvChannelRow(
+    number: Int,
+    item: LiveTvRowItem,
+    onClick: () -> Unit,
+    onFavoriteToggle: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(NuvioTheme.colors.BackgroundCard)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onFavoriteToggle,
+            )
+            .tvFocusRing(cornerRadius = 12.dp)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = number.toString(),
+            style = MaterialTheme.typography.bodyMedium,
+            color = NuvioTheme.colors.TextSecondary,
+            textAlign = TextAlign.End,
+            modifier = Modifier.width(36.dp),
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Box(
+            modifier = Modifier.size(48.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(NuvioTheme.colors.BackgroundElevated),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (!item.iconUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = item.iconUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize().padding(4.dp),
+                )
+            } else {
+                Text(
+                    text = "▶",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = NuvioTheme.colors.TextSecondary,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = item.name,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleMedium,
+                color = NuvioTheme.colors.TextPrimary,
+            )
+            if (!item.groupName.isNullOrBlank()) {
+                Text(
+                    text = item.groupName,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioTheme.colors.TextSecondary,
+                )
+            }
+        }
+        Text(
+            text = if (item.isFavorite) "★" else "☆",
+            style = MaterialTheme.typography.titleLarge,
+            color = if (item.isFavorite) NuvioTheme.colors.Secondary
+            else NuvioTheme.colors.TextSecondary,
+        )
     }
 }
 
