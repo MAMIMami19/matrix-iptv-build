@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.profile
 import androidx.tv.material3.MaterialTheme
 import com.nuvio.tv.ui.theme.NuvioPrimitives
 import com.nuvio.tv.ui.util.contentTextDirection
+import com.nuvio.tv.ui.util.touchClickBridge
 import com.nuvio.tv.ui.theme.NuvioMotion
 
 import com.nuvio.tv.ui.theme.NuvioTheme
@@ -1460,7 +1461,10 @@ private fun CreateProfileOverlay(
                 .clip(RoundedCornerShape(20.dp))
                 .background(NuvioTheme.colors.BackgroundElevated)
                 .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border, RoundedCornerShape(20.dp))
-                .pointerInput(Unit) { detectTapGestures { } }
+                // Matrix phone variant: the empty tap detector used to swallow
+                // taps so they would not dismiss the panel — the bridge consumes
+                // them the same way AND clicks the panel's buttons.
+                .touchClickBridge()
                 .padding(NuvioTheme.spacing.xxl),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -1802,7 +1806,10 @@ private fun EditProfileOverlay(
                 .clip(RoundedCornerShape(20.dp))
                 .background(NuvioTheme.colors.BackgroundElevated)
                 .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border, RoundedCornerShape(20.dp))
-                .pointerInput(Unit) { detectTapGestures { } }
+                // Matrix phone variant: the empty tap detector used to swallow
+                // taps so they would not dismiss the panel — the bridge consumes
+                // them the same way AND clicks the panel's buttons.
+                .touchClickBridge()
                 .padding(NuvioTheme.spacing.xxl),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
