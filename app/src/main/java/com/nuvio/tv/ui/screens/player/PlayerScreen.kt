@@ -167,6 +167,7 @@ import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.ui.components.LoadingIndicator
 import android.text.format.DateFormat
 import com.nuvio.tv.ui.util.rememberRawSvgPainter
+import com.nuvio.tv.ui.util.touchClickBridge
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -4367,6 +4368,8 @@ private fun SpeedSelectionDialog(
         // The dialog is its own window, so the player's controls dim does not reach it.
         Box(
             modifier = Modifier
+                // Matrix phone variant: dialog window — bridge touch taps here.
+                .touchClickBridge()
                 .playerControlsBrightness(brightness)
                 .width(300.dp)
                 .clip(RoundedCornerShape(NuvioTheme.radii.xl))

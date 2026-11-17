@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextDirection
 import com.nuvio.tv.R
 import com.nuvio.tv.core.tracking.TrackingListManagementCapabilities
 import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
+import com.nuvio.tv.ui.util.touchClickBridge
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -87,6 +88,8 @@ internal fun ManageListsDialog(
         AmbientDialogEffect(onDismiss)
         Box(
             modifier = Modifier
+                // Matrix phone variant: dialog window — bridge touch taps here.
+                .touchClickBridge()
                 .width(620.dp)
                 .background(NuvioTheme.colors.BackgroundElevated, RoundedCornerShape(NuvioTheme.radii.xl))
                 .padding(NuvioTheme.spacing.xl)

@@ -75,6 +75,7 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.BlurTransformation
 import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
+import com.nuvio.tv.ui.util.touchClickBridge
 import com.nuvio.tv.ui.util.toAbsoluteAlignment
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -284,6 +285,8 @@ internal fun EpisodeOptionsOverlay(
         AmbientDialogEffect(onDismiss)
         Box(
             modifier = Modifier
+                // Matrix phone variant: dialog window — bridge touch taps here.
+                .touchClickBridge()
                 .fillMaxSize()
                 .then(
                     if (isNoneStyle) {

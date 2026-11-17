@@ -205,6 +205,7 @@ import com.nuvio.tv.ui.util.LocalFastHorizontalNavigationEnabled
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
 import com.nuvio.tv.ui.util.rememberDrawerItemFocusRequesters
 import com.nuvio.tv.ui.util.rememberRawSvgPainter
+import com.nuvio.tv.ui.util.touchClickBridge
 import com.nuvio.tv.updater.UpdateViewModel
 import com.nuvio.tv.updater.ui.UpdateBannerHost
 import dagger.hilt.android.AndroidEntryPoint
@@ -741,7 +742,9 @@ open class MainActivity : ComponentActivity() {
                 ) {
                     // Wrap everything in a Box. This prevents any black flash between
                     // profile selection and the home content
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    // Matrix phone variant: touchClickBridge restores taps — the TV
+                    // components handle DPAD keys only, so taps would otherwise do nothing.
+                    Box(modifier = Modifier.fillMaxSize().touchClickBridge()) {
 
                     var startupDestination = StartupDestination.Loading
                     val surfaceContentReady = hasSeenAuthQrOnFirstLaunch != null &&

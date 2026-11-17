@@ -54,6 +54,7 @@ import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.components.PlayManualOverrideDialog
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
+import com.nuvio.tv.ui.util.touchClickBridge
 import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
 
 @Composable
@@ -92,7 +93,8 @@ internal fun EpisodeShufflePreview(
             window?.setDimAmount(0f)
         }
         Column(
-            modifier = Modifier.fillMaxSize()
+            // Matrix phone variant: dialog window — bridge touch taps here.
+            modifier = Modifier.touchClickBridge().fillMaxSize()
                 .background(Brush.linearGradient(listOf(Color(0xFF070707), Color(0xFF101010), Color(0xFF151515))))
                 .onPreviewKeyEvent { event ->
                     if (starting) return@onPreviewKeyEvent true

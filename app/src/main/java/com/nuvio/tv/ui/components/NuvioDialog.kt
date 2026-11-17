@@ -38,6 +38,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
+import com.nuvio.tv.ui.util.touchClickBridge
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -74,6 +75,9 @@ fun NuvioDialog(
         AmbientDialogEffect(onDismiss)
         Box(
             modifier = Modifier
+                // Matrix phone variant: dialogs are their own window, so the
+                // activity-level bridge does not reach them — bridge here too.
+                .touchClickBridge()
                 .width(width)
                 .heightIn(max = maxDialogHeight)
                 .clip(containerShape)

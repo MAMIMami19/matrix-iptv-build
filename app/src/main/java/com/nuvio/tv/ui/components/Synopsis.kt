@@ -61,6 +61,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.contentTextDirection
+import com.nuvio.tv.ui.util.touchClickBridge
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -219,6 +220,8 @@ fun SynopsisOverlay(
         AmbientDialogEffect(onDismiss)
         Box(
             modifier = Modifier
+                // Matrix phone variant: dialog window — bridge touch taps here.
+                .touchClickBridge()
                 .fillMaxSize()
                 .background(
                     Brush.linearGradient(

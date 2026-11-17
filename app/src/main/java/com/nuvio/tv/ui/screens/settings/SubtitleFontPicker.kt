@@ -55,6 +55,7 @@ import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.screens.player.rememberSubtitleFontFamily
 import com.nuvio.tv.ui.screens.player.subtitleFontLabel
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.util.touchClickBridge
 
 @Composable
 internal fun SubtitleFontPickerDialog(
@@ -147,12 +148,15 @@ internal fun SubtitleFontPickerDialog(
             onDismissRequest = viewModel::stopImport,
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
-            QrCodeOverlay(
-                qrBitmap = importState.qrCodeBitmap,
-                serverUrl = importState.serverUrl,
-                instruction = importState.error ?: stringResource(R.string.sub_font_import_qr),
-                onClose = viewModel::stopImport
-            )
+            // Matrix phone variant: dialog window — bridge touch taps here.
+            Box(modifier = Modifier.touchClickBridge()) {
+                QrCodeOverlay(
+                    qrBitmap = importState.qrCodeBitmap,
+                    serverUrl = importState.serverUrl,
+                    instruction = importState.error ?: stringResource(R.string.sub_font_import_qr),
+                    onClose = viewModel::stopImport
+                )
+            }
         }
     }
 }

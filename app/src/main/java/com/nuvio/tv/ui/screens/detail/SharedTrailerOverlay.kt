@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.detail
 
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.util.touchClickBridge
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -100,6 +101,8 @@ fun SharedTrailerOverlay(
         AmbientDialogEffect(onDismiss)
         Box(
             modifier = Modifier
+                // Matrix phone variant: dialog window — bridge touch taps here.
+                .touchClickBridge()
                 .fillMaxSize()
                 .background(Color.Black)
                 .focusRequester(overlayFocusRequester)
