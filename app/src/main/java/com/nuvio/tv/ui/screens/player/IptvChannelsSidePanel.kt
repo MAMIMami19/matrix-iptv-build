@@ -134,7 +134,9 @@ internal fun IptvChannelsSidePanel(
     // when the cache is cold — group rows then show no count).
     val groupCounts = remember(groups) {
         XtreamClient.cachedLiveStreams()
-            ?.groupingBy { it.categoryId }.eachCount().orEmpty()
+            ?.groupingBy { it.categoryId }
+            ?.eachCount()
+            .orEmpty()
     }
 
     val favoriteIds = remember(favorites) { favorites.map { it.streamId }.toSet() }
