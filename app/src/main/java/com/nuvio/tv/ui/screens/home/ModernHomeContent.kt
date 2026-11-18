@@ -8,6 +8,7 @@ package com.nuvio.tv.ui.screens.home
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
@@ -99,6 +100,10 @@ import kotlin.math.roundToInt
 
 // Height of the wide card as a fraction of its width, matching the 2.5:1 shape of the mobile card.
 private const val WIDE_CARD_HEIGHT_RATIO = 0.4f
+
+// Matrix 3.5.2: how often the Modern hero carousel advances to the next
+// Trending title on its own.
+private const val MODERN_HERO_CAROUSEL_ADVANCE_MS = 10_000L
 
 private class ItemIdentitySnapshot(
     var byRow: Map<String, StableList<String>> = emptyMap()
@@ -254,6 +259,29 @@ fun ModernHomeContent(
     val heroItem = remember {
         val initialHero = carouselRows.list.firstOrNull()?.items?.list?.firstOrNull()?.heroPreview
         mutableStateOf<HeroPreview?>(initialHero)
+    }
+    // Matrix 3.5.2: the Modern hero is focus-driven by design —
+    // resolvedHeroState reads the FOCUSED item, so the computed Trending
+    // heroItems never reached the screen: on entry the hero showed the
+    // first Continue Watching card, followed focus afterwards, and never
+    // auto-advanced (Modern has no carousel at all — HeroCarousel is only
+    // used in the empty-rows fallback). The hero now runs its own
+    // carousel over uiState.heroItems, independent of row focus.
+    val localContext = LocalContext.current
+    val latestHeroItems = rememberUpdatedState(uiState.heroItems)
+    val carouselHeroActive = uiState.heroSectionEnabled && uiState.heroItems.isNotEmpty()
+    var heroCarouselIndex by remember { mutableIntStateOf(0) }
+    LaunchedEffect(carouselHeroActive, uiState.heroItems.size) {
+        if (!carouselHeroActive) return@LaunchedEffect
+        while (true) {
+            delay(MODERN_HERO_CAROUSEL_ADVANCE_MS)
+            val items = latestHeroItems.value
+            if (items.size > 1) {
+                heroCarouselIndex = (heroCarouselIndex + 1) % items.size
+                val current = items.getOrNull(heroCarouselIndex)
+                Log.d("MatrixHero", "carousel advance index=$heroCarouselIndex item=${current?.name} id=${current?.id}")
+            }
+        }
     }
     val optionsItem = remember { mutableStateOf<ContinueWatchingItem?>(null) }
     val lastFocusedContinueWatchingIndex = remember { mutableIntStateOf(-1) }
@@ -906,21 +934,53 @@ fun ModernHomeContent(
                     expandedCatalogFocusKey.value = null
                 }
             }
+            // Matrix 3.5.2: the carousel hero preview (Trending item at the
+            // current carousel index), or null when the carousel is off —
+            // in which case the hero keeps the existing focus-driven
+            // behavior exactly.
+            val carouselHeroPreviewState = remember(
+                latestHeroItems,
+                uiState.heroSectionEnabled,
+                useLandscapePosters
+            ) {
+                derivedStateOf {
+                    val items = latestHeroItems.value
+                    if (!uiState.heroSectionEnabled || items.isEmpty()) {
+                        null
+                    } else {
+                        items.getOrNull(heroCarouselIndex.coerceIn(0, items.size - 1))
+                            ?.toModernHeroPreview(useLandscapePosters, localContext)
+                    }
+                }
+            }
             val liveHeroSceneState = remember(
                 resolvedHeroState,
                 shouldPlayHeroTrailerState,
                 heroMediaDataState,
                 heroMediaMutedState,
-                fullScreenBackdrop
+                fullScreenBackdrop,
+                carouselHeroPreviewState
             ) {
                 derivedStateOf {
                     val (heroBackdrop, resolvedHero, enrichmentActive) = resolvedHeroState.value
                     val (heroMediaUrl, heroMediaAudioUrl, heroMediaPlaybackKey) = heroMediaDataState.value
-                    val preview = if (enrichmentActive) null else resolvedHero
+                    // Matrix 3.5.2: when the Trending carousel is active, the
+                    // hero shows the carousel item — never the focused row
+                    // item. A focused-item trailer still plays over it when
+                    // one is expanded (the title block fades out while a
+                    // fullscreen trailer plays, as before).
+                    val carouselPreview = carouselHeroPreviewState.value
+                    val preview = when {
+                        carouselPreview != null -> carouselPreview
+                        enrichmentActive -> null
+                        else -> resolvedHero
+                    }
                     ModernHeroSceneState(
-                        heroBackdrop = heroBackdrop,
+                        heroBackdrop = carouselPreview?.let {
+                            firstNonBlank(it.backdrop, it.imageUrl, it.poster)
+                        } ?: heroBackdrop,
                         preview = preview,
-                        enrichmentActive = enrichmentActive,
+                        enrichmentActive = if (carouselPreview != null) false else enrichmentActive,
                         shouldPlayTrailer = shouldPlayHeroTrailerState.value,
                         trailerFirstFrameRendered = heroTrailerFirstFrameRendered,
                         trailerUrl = heroMediaUrl,

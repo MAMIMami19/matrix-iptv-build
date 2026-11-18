@@ -534,6 +534,44 @@ internal fun buildCatalogItem(
     )
 }
 
+/**
+ * Matrix 3.5.2: builds the Modern hero preview for a computed hero item
+ * (the Trending carousel), mirroring [buildCatalogItem]'s field mapping.
+ * Hero items carry no row, so the row-dependent fields (key, focus key,
+ * addon URL) are not needed here — only the preview itself.
+ */
+internal fun MetaPreview.toModernHeroPreview(
+    useLandscapePosters: Boolean,
+    context: android.content.Context
+): HeroPreview {
+    return HeroPreview(
+        title = name,
+        logo = logo,
+        description = description,
+        contentTypeText = localizedContentType(context, apiType),
+        isSeries = isSeriesType(apiType),
+        yearText = extractYearText(type, releaseInfo, released),
+        runtimeText = formatHeroRuntime(runtime),
+        imdbText = imdbRating?.let { String.format("%.1f", it) },
+        ageRatingText = ageRating,
+        statusText = status,
+        countryText = country,
+        languageText = language?.uppercase(),
+        genres = genres.take(3).asStable(),
+        poster = poster,
+        backdrop = backdropUrl,
+        imageUrl = if (useLandscapePosters) {
+            landscapePoster ?: backdropUrl ?: poster
+        } else {
+            poster ?: backdropUrl
+        },
+        mdbListRatings = mdbListRatings,
+        mdbListRatingOrder = mdbListRatingOrder,
+        frozenBackdropUrl = backdropUrl,
+        frozenLogoUrl = logo
+    )
+}
+
 internal fun buildCollectionFolderItem(
     collection: Collection,
     folder: CollectionFolder,
