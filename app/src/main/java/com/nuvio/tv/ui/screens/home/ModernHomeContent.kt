@@ -1431,35 +1431,12 @@ fun ModernHomeContent(
             // detail; the wrapper is always composed (unlike
             // HeroTitleBlock, which returns early with no preview) so
             // the focus target never disappears.
-            Card(
-                onClick = {
-                    val current = latestHeroItems.value.getOrNull(heroCarouselIndex)
-                    if (current != null) {
-                        onNavigateToDetail(current.id, current.apiType, "")
-                    }
-                },
-                enabled = carouselHeroActive,
-                modifier = heroMetadataModifier
-                    .focusRequester(heroFocusRequester)
-                    .onFocusChanged {
-                        isHeroFocused = it.hasFocus
-                        Log.d("MatrixHero", "hero focus changed: hasFocus=${it.hasFocus} isFocused=${it.isFocused}")
-                    }
-                    .onPreviewKeyEvent(handleHeroKeyEvent),
-                colors = CardDefaults.colors(
-                    containerColor = Color.Transparent,
-                    focusedContainerColor = Color.Black.copy(alpha = 0.35f),
-                ),
-                border = CardDefaults.border(
-                    border = Border.None,
-                    focusedBorder = Border(
-                        border = BorderStroke(2.dp, Color(0xFFFFD45C)),
-                        shape = RoundedCornerShape(12.dp),
-                    ),
-                ),
-                shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp)),
-                scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f),
-            ) {
+            // tv-material 1.1.0-rc01's Card has no `enabled` parameter,
+            // so the carouselHeroActive gate is a composition branch
+            // instead: Card while the carousel exists, plain Box while
+            // it doesn't — 3.5.3 gated the wrapper's focusable the same
+            // way, so an empty hero is never a focus target.
+            val heroContent: @Composable () -> Unit = {
                 Column(modifier = Modifier.padding(8.dp)) {
                     if (isHeroFocused && carouselHeroActive) {
                         HeroCarouselDots(
@@ -1492,6 +1469,42 @@ fun ModernHomeContent(
                         descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
                         modifier = Modifier
                     )
+                }
+            }
+            if (carouselHeroActive) {
+                Card(
+                    onClick = {
+                        val current = latestHeroItems.value.getOrNull(heroCarouselIndex)
+                        if (current != null) {
+                            onNavigateToDetail(current.id, current.apiType, "")
+                        }
+                    },
+                    modifier = heroMetadataModifier
+                        .focusRequester(heroFocusRequester)
+                        .onFocusChanged {
+                            isHeroFocused = it.hasFocus
+                            Log.d("MatrixHero", "hero focus changed: hasFocus=${it.hasFocus} isFocused=${it.isFocused}")
+                        }
+                        .onPreviewKeyEvent(handleHeroKeyEvent),
+                    colors = CardDefaults.colors(
+                        containerColor = Color.Transparent,
+                        focusedContainerColor = Color.Black.copy(alpha = 0.35f),
+                    ),
+                    border = CardDefaults.border(
+                        border = Border.None,
+                        focusedBorder = Border(
+                            border = BorderStroke(2.dp, Color(0xFFFFD45C)),
+                            shape = RoundedCornerShape(12.dp),
+                        ),
+                    ),
+                    shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp)),
+                    scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f),
+                ) {
+                    heroContent()
+                }
+            } else {
+                Box(modifier = heroMetadataModifier) {
+                    heroContent()
                 }
             }
 
