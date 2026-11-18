@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -294,6 +295,39 @@ internal fun ModernHeroGradientLayer(
                 }
             }
     )
+}
+
+/**
+ * Matrix 3.5.3: carousel position dots, shown above the hero title
+ * while the hero itself holds focus — the visible cue that the hero is
+ * its own navigable element (LEFT/RIGHT flips it). Hidden with a single
+ * item (nothing to flip through).
+ */
+@Composable
+internal fun HeroCarouselDots(
+    count: Int,
+    activeIndex: Int,
+    modifier: Modifier = Modifier
+) {
+    if (count <= 1) return
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(count) { index ->
+            val active = index == activeIndex
+            Box(
+                modifier = Modifier
+                    .size(if (active) 10.dp else 8.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (active) Color(0xFFFFD45C)
+                        else Color.White.copy(alpha = 0.45f)
+                    )
+            )
+        }
+    }
 }
 
 @Composable

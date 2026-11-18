@@ -14,9 +14,12 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,9 +44,11 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalView
@@ -54,6 +59,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import coil3.request.CachePolicy
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import kotlin.math.abs
@@ -267,11 +273,32 @@ fun ModernHomeContent(
     // auto-advanced (Modern has no carousel at all — HeroCarousel is only
     // used in the empty-rows fallback). The hero now runs its own
     // carousel over uiState.heroItems, independent of row focus.
+    // Matrix 3.5.3: hybrid — the carousel shows while focus is on the
+    // hero itself or the top bar (or nowhere yet); once focus moves to
+    // a row card, the hero previews that card again (see
+    // liveHeroSceneState below). The hero is its own focusable element:
+    // entry focus starts ON it, UP/DOWN moves hero <-> first row,
+    // LEFT/RIGHT flips the carousel, OK opens the detail.
     val localContext = LocalContext.current
     val latestHeroItems = rememberUpdatedState(uiState.heroItems)
     val carouselHeroActive = uiState.heroSectionEnabled && uiState.heroItems.isNotEmpty()
     var heroCarouselIndex by remember { mutableIntStateOf(0) }
-    LaunchedEffect(carouselHeroActive, uiState.heroItems.size) {
+    val heroFocusRequester = remember { FocusRequester() }
+    var isHeroFocused by remember { mutableStateOf(false) }
+    var carouselManualFlipNonce by remember { mutableIntStateOf(0) }
+    val flipHeroCarousel: (Int) -> Unit = { step ->
+        val items = latestHeroItems.value
+        if (items.size > 1) {
+            heroCarouselIndex = ((heroCarouselIndex + step) % items.size + items.size) % items.size
+            // Restart the auto-advance timer: the effect below restarts
+            // on the nonce, so the next automatic advance is a full
+            // 10s after the manual flip.
+            carouselManualFlipNonce++
+            val current = items.getOrNull(heroCarouselIndex)
+            Log.d("MatrixHero", "carousel manual index=$heroCarouselIndex item=${current?.name} id=${current?.id}")
+        }
+    }
+    LaunchedEffect(carouselHeroActive, uiState.heroItems.size, carouselManualFlipNonce) {
         if (!carouselHeroActive) return@LaunchedEffect
         while (true) {
             delay(MODERN_HERO_CAROUSEL_ADVANCE_MS)
@@ -282,6 +309,49 @@ fun ModernHomeContent(
                 Log.d("MatrixHero", "carousel advance index=$heroCarouselIndex item=${current?.name} id=${current?.id}")
             }
         }
+    }
+    // Matrix 3.5.3: fresh entry (no saved focus) starts ON the hero.
+    // Hero items usually land ~1s after the rows; wait up to 2s for
+    // them (this effect restarts when they arrive, cancelling the
+    // delay) and fall back to the first row if they never come.
+    // The request retries across frames and verifies via isHeroFocused
+    // — the hero wrapper may not be laid out on the first attempt.
+    // Returning users (saved focus) are unaffected: the restore path
+    // below focuses their saved row, and this effect no-ops.
+    var initialHeroFocusResolved by remember { mutableStateOf(false) }
+    val latestCarouselHeroActive = rememberUpdatedState(carouselHeroActive)
+    val shouldRequestInitialHeroFocus = !focusState.hasSavedFocus && uiState.heroSectionEnabled
+    LaunchedEffect(shouldRequestInitialHeroFocus, carouselHeroActive, carouselRows.list.isNotEmpty()) {
+        if (!shouldRequestInitialHeroFocus || initialHeroFocusResolved) return@LaunchedEffect
+        if (carouselRows.list.isEmpty()) return@LaunchedEffect
+        if (!carouselHeroActive) {
+            delay(2000)
+            if (!latestCarouselHeroActive.value) {
+                val firstRow = carouselRows.list.firstOrNull()
+                if (firstRow != null) {
+                    pendingRowFocusKey.value = firstRow.key
+                    pendingRowFocusIndex.value = focusedItemByRow[firstRow.key] ?: 0
+                    pendingRowFocusNonce.intValue++
+                }
+                initialHeroFocusResolved = true
+                return@LaunchedEffect
+            }
+        }
+        repeat(12) {
+            runCatching { heroFocusRequester.requestFocus() }
+            withFrameNanos { }
+            if (isHeroFocused) {
+                initialHeroFocusResolved = true
+                return@LaunchedEffect
+            }
+        }
+        val firstRow = carouselRows.list.firstOrNull()
+        if (firstRow != null) {
+            pendingRowFocusKey.value = firstRow.key
+            pendingRowFocusIndex.value = focusedItemByRow[firstRow.key] ?: 0
+            pendingRowFocusNonce.intValue++
+        }
+        initialHeroFocusResolved = true
     }
     val optionsItem = remember { mutableStateOf<ContinueWatchingItem?>(null) }
     val lastFocusedContinueWatchingIndex = remember { mutableIntStateOf(-1) }
@@ -531,19 +601,29 @@ fun ModernHomeContent(
             val resolvedIndex = focusedItemByRow[resolvedActive.key]
                 ?.coerceIn(0, (resolvedActive.items.size - 1).coerceAtLeast(0))
                 ?: 0
-            focusHolder.activeRowKey = resolvedActive.key
-            focusHolder.activeItemIndex = resolvedIndex
-            activeRowKey.value = resolvedActive.key
-            activeItemIndex.intValue = resolvedIndex
-            focusedItemByRow[resolvedActive.key] = resolvedIndex
-            heroItem.value = resolvedActive.items.getOrNull(resolvedIndex)?.heroPreview
-                ?: resolvedActive.items.firstOrNull()?.heroPreview
+            // Matrix 3.5.3: on fresh entry with the hero section on,
+            // focus starts on the hero — leave the active row unset so
+            // no row item auto-focuses via isCurrent and races the hero
+            // focus request. The hero-focus effect above owns initial
+            // focus; the active row is set when the user first focuses
+            // a row card. With the hero section off, the old behavior
+            // (first row auto-selected) is unchanged.
+            val deferInitialFocusToHero = !focusState.hasSavedFocus && !hadActiveRow && uiState.heroSectionEnabled
+            if (!deferInitialFocusToHero) {
+                focusHolder.activeRowKey = resolvedActive.key
+                focusHolder.activeItemIndex = resolvedIndex
+                activeRowKey.value = resolvedActive.key
+                activeItemIndex.intValue = resolvedIndex
+                focusedItemByRow[resolvedActive.key] = resolvedIndex
+                heroItem.value = resolvedActive.items.getOrNull(resolvedIndex)?.heroPreview
+                    ?: resolvedActive.items.firstOrNull()?.heroPreview
 
-            if (!focusState.hasSavedFocus && !hadActiveRow) {
-                initialAutoSelectedKey = resolvedActive.key
-                pendingRowFocusKey.value = resolvedActive.key
-                pendingRowFocusIndex.value = resolvedIndex
-                pendingRowFocusNonce.intValue++
+                if (!focusState.hasSavedFocus && !hadActiveRow) {
+                    initialAutoSelectedKey = resolvedActive.key
+                    pendingRowFocusKey.value = resolvedActive.key
+                    pendingRowFocusIndex.value = resolvedIndex
+                    pendingRowFocusNonce.intValue++
+                }
             }
         }
 
@@ -733,7 +813,32 @@ fun ModernHomeContent(
     val screenWidth = localConfiguration.screenWidthDp.dp
     val screenHeight = localConfiguration.screenHeightDp.dp
 
-    Box(modifier = Modifier.fillMaxSize().background(NuvioTheme.colors.Background)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NuvioTheme.colors.Background)
+            // Matrix 3.5.3: UP from the first row lands on the hero
+            // instead of jumping straight to the top bar (the bar stays
+            // focusable while invisible, so spatial search preferred
+            // it — same fix as Classic got in 3.5, now for Modern).
+            // Single presses only; held UP is the fast-scroll drag.
+            // Respects the expanded-card swallow in ModernHomeRowsList:
+            // while a catalog card is expanded, UP stays swallowed.
+            .onPreviewKeyEvent { event ->
+                if (!carouselHeroActive) return@onPreviewKeyEvent false
+                if (event.key != Key.DirectionUp || event.type != KeyEventType.KeyDown) {
+                    return@onPreviewKeyEvent false
+                }
+                if (event.nativeKeyEvent.repeatCount != 0) return@onPreviewKeyEvent false
+                if (!contentHasFocus.value) return@onPreviewKeyEvent false
+                if (expandedCatalogFocusKey.value != null) return@onPreviewKeyEvent false
+                val firstRowKey = carouselRows.list.firstOrNull()?.key ?: return@onPreviewKeyEvent false
+                if (activeRowKey.value != firstRowKey) return@onPreviewKeyEvent false
+                if (verticalRowListState.firstVisibleItemIndex != 0) return@onPreviewKeyEvent false
+                runCatching { heroFocusRequester.requestFocus() }
+                true
+            }
+    ) {
             val posterCardCornerRadius = remember(uiState.posterCardCornerRadiusDp) { uiState.posterCardCornerRadiusDp.dp }
             val rowHorizontalPadding = 52.dp
 
@@ -871,6 +976,10 @@ fun ModernHomeContent(
                         effectiveAutoplayEnabled &&
                         !isSidebarExpanded.value &&
                         !isRapidHorizontalNav.value &&
+                        // Matrix 3.5.3: the trailer belongs to the
+                        // focused card — stop it when focus leaves the
+                        // rows (hero / top bar show the carousel).
+                        contentHasFocus.value &&
                         trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA &&
                         !heroTrailerUrlsState.value.first.isNullOrBlank()
                 }
@@ -885,6 +994,10 @@ fun ModernHomeContent(
                 derivedStateOf {
                     isScrollStoppedState.value &&
                         !isSidebarExpanded.value &&
+                        // Matrix 3.5.3: same as the catalog trailer —
+                        // the collection video belongs to the focused
+                        // folder card; stop it off the rows.
+                        contentHasFocus.value &&
                         !collectionHeroVideoUrl.isNullOrBlank() &&
                         collectionHeroVideoPlaybackKey != null &&
                         endedCollectionHeroVideoPlaybackKey != collectionHeroVideoPlaybackKey
@@ -964,12 +1077,13 @@ fun ModernHomeContent(
                 derivedStateOf {
                     val (heroBackdrop, resolvedHero, enrichmentActive) = resolvedHeroState.value
                     val (heroMediaUrl, heroMediaAudioUrl, heroMediaPlaybackKey) = heroMediaDataState.value
-                    // Matrix 3.5.2: when the Trending carousel is active, the
-                    // hero shows the carousel item — never the focused row
-                    // item. A focused-item trailer still plays over it when
-                    // one is expanded (the title block fades out while a
-                    // fullscreen trailer plays, as before).
-                    val carouselPreview = carouselHeroPreviewState.value
+                    // Matrix 3.5.3: hybrid hero — the Trending carousel
+                    // shows while focus is on the hero itself or the top
+                    // bar (or nowhere yet, on entry); once focus moves to
+                    // a row card, the hero previews that card again (the
+                    // original Modern behavior). contentHasFocus is true
+                    // exactly while a row card holds focus.
+                    val carouselPreview = if (contentHasFocus.value) null else carouselHeroPreviewState.value
                     val preview = when {
                         carouselPreview != null -> carouselPreview
                         enrichmentActive -> null
@@ -1190,30 +1304,107 @@ fun ModernHomeContent(
                     .fillMaxWidth(MODERN_HERO_TEXT_WIDTH_FRACTION)
             }
 
-            HeroTitleBlock(
-                previewProvider = {
-                    val state = heroSceneStateLambda()
-                    if (isRapidHorizontalNav.value || state.enrichmentActive) null
-                    else state.preview
-                },
-                enrichmentActive = {
-                    if (isRapidHorizontalNav.value) false
-                    else heroSceneStateLambda().enrichmentActive
-                },
-                portraitMode = !useLandscapePosters,
-                showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
-                mdbListShowOnHero = uiState.mdbListShowOnHero,
-                mdbListRatingOrder = uiState.mdbListRatingOrder,
-                trailerPlaying = {
-                    if (isRapidHorizontalNav.value) false
-                    else {
-                        val state = heroSceneStateLambda()
-                        state.fullScreenBackdrop && shouldPlayTrailerLambda() && heroTrailerRenderedLambda()
+            // Matrix 3.5.3: keys on the focused hero. RTL: LEFT advances
+            // the carousel, like rows (in RTL, DirectionLeft is the
+            // forward direction). DOWN returns focus to the first row:
+            // the pending-focus request covers fresh entry (active row
+            // still null), the content requester covers the return path
+            // (active row set — the restorer chain lands on the saved
+            // item); each is a harmless no-op when it doesn't apply.
+            // UP is deliberately not handled here: spatial search takes
+            // it to the top bar.
+            val handleHeroKeyEvent: (KeyEvent) -> Boolean = { event ->
+                if (event.type != KeyEventType.KeyDown) false
+                else when (event.key) {
+                    Key.DirectionLeft -> {
+                        flipHeroCarousel(+1)
+                        true
                     }
-                },
-                descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
+                    Key.DirectionRight -> {
+                        flipHeroCarousel(-1)
+                        true
+                    }
+                    Key.DirectionCenter, Key.Enter -> {
+                        if (event.nativeKeyEvent.repeatCount != 0) false
+                        else {
+                            val current = latestHeroItems.value.getOrNull(heroCarouselIndex)
+                            if (current != null) {
+                                onNavigateToDetail(current.id, current.apiType, "")
+                                true
+                            } else false
+                        }
+                    }
+                    Key.DirectionDown -> {
+                        if (event.nativeKeyEvent.repeatCount != 0) false
+                        else {
+                            val firstRow = carouselRows.list.firstOrNull()
+                            if (firstRow != null) {
+                                pendingRowFocusKey.value = firstRow.key
+                                pendingRowFocusIndex.value = focusedItemByRow[firstRow.key] ?: 0
+                                pendingRowFocusNonce.intValue++
+                            }
+                            runCatching { contentFocusRequester.requestFocus() }
+                            true
+                        }
+                    }
+                    else -> false
+                }
+            }
+
+            // Matrix 3.5.3: the hero is its own focusable element. The
+            // wrapper is always composed (unlike HeroTitleBlock, which
+            // returns early with no preview) so the focus target never
+            // disappears. Focused, it shows a gold ring + the carousel
+            // dots above the title; the 8dp inner padding is constant
+            // so the title never jumps when focus enters/leaves.
+            Box(
                 modifier = heroMetadataModifier
-            )
+                    .focusRequester(heroFocusRequester)
+                    .focusable(enabled = carouselHeroActive)
+                    .onFocusChanged { isHeroFocused = it.hasFocus }
+                    .onPreviewKeyEvent(handleHeroKeyEvent)
+                    .then(
+                        if (isHeroFocused) Modifier
+                            .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                            .border(2.dp, Color(0xFFFFD45C), RoundedCornerShape(12.dp))
+                            .padding(8.dp)
+                        else Modifier.padding(8.dp)
+                    )
+            ) {
+                Column {
+                    if (isHeroFocused && carouselHeroActive) {
+                        HeroCarouselDots(
+                            count = uiState.heroItems.size,
+                            activeIndex = heroCarouselIndex,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                    HeroTitleBlock(
+                        previewProvider = {
+                            val state = heroSceneStateLambda()
+                            if (isRapidHorizontalNav.value || state.enrichmentActive) null
+                            else state.preview
+                        },
+                        enrichmentActive = {
+                            if (isRapidHorizontalNav.value) false
+                            else heroSceneStateLambda().enrichmentActive
+                        },
+                        portraitMode = !useLandscapePosters,
+                        showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
+                        mdbListShowOnHero = uiState.mdbListShowOnHero,
+                        mdbListRatingOrder = uiState.mdbListRatingOrder,
+                        trailerPlaying = {
+                            if (isRapidHorizontalNav.value) false
+                            else {
+                                val state = heroSceneStateLambda()
+                                state.fullScreenBackdrop && shouldPlayTrailerLambda() && heroTrailerRenderedLambda()
+                            }
+                        },
+                        descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
+                        modifier = Modifier
+                    )
+                }
+            }
 
             val latestOnFocusedRowKeyChanged by rememberUpdatedState(onFocusedRowKeyChanged)
             val onActiveRowKeyChangeLambda = remember {

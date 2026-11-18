@@ -1,26 +1,25 @@
-name: Build Matrix 3.5.2
+name: Build Matrix 3.5.3
 
-# Matrix 3.5.2: display-layer hero fix on top of 3.5.1. The 3.5.1 data
-# fix was proven correct on-device (logcat: trendingRows=6, heroCount=7,
-# first=Other Mommy) but the on-screen hero still showed the focused
-# Continue Watching card: the user is on the MODERN home layout, whose
-# hero is focus-driven by design (resolvedHeroState reads the FOCUSED
-# item; uiState.heroItems is only used in the empty-rows fallback, and
-# Modern has no auto-advance at all). The Modern hero now runs its own
-# carousel over the computed Trending heroItems, independent of row
-# focus, auto-advancing every 10s. All 3.5/3.5.1 behavior unchanged.
+# Matrix 3.5.3: hybrid hero on top of 3.5.2. The 3.5.2 carousel worked
+# (Trending on entry, auto-advancing every 10s) but the hero no longer
+# followed focus at all, and the user wants BOTH: the Trending carousel
+# on entry, the hero as its own focusable element (entry focus starts
+# ON the hero; UP/DOWN moves hero <-> first row; LEFT/RIGHT flips the
+# carousel; OK opens the detail), and the original Modern behavior back
+# once he moves — when focus is on a row card, the hero previews that
+# card again. Focus on the hero or the top bar shows the carousel.
 # Signing uses the same NUVIO_KEYSTORE_B64 secret as the v2.x/3.0/3.1/
-# 3.2/3.3/3.4/3.5/3.5.1 releases, so this installs OVER Matrix 3.5.1 on
-# box and phone.
+# 3.2/3.3/3.4/3.5/3.5.1/3.5.2 releases, so this installs OVER Matrix
+# 3.5.2 on box and phone.
 on:
   workflow_dispatch:
   push:
-    branches: [matrix-3.5.2-hero-display]
+    branches: [matrix-3.5.3-hybrid-hero]
 
 # Serialize runs: two concurrent full-release builds died together when the
 # runner pool cancelled them (runs 43618067580/43618374036); queue instead.
 concurrency:
-  group: matrix-3.5.2-hero-display-build
+  group: matrix-3.5.3-hybrid-hero-build
   cancel-in-progress: false
 
 permissions:
@@ -93,9 +92,9 @@ jobs:
           # are invisible to the in-app updater (unauthenticated API calls
           # never see them, and the tag is not a valid version anyway).
           # Delete the draft after the APKs are verified/downloaded.
-          TAG="matrix-3.5.2-draft-${{ github.run_number }}"
+          TAG="matrix-3.5.3-draft-${{ github.run_number }}"
           gh release create "$TAG" \
             --draft \
-            --title "Matrix 3.5.2 draft (CI run ${{ github.run_number }})" \
-            --notes "CI-built Matrix 3.5.2 release APKs (Modern hero runs its own carousel over the computed Trending heroItems, independent of row focus, auto-advancing every 10s; all 3.5/3.5.1 features unchanged). Draft only — do not publish without review." \
+            --title "Matrix 3.5.3 draft (CI run ${{ github.run_number }})" \
+            --notes "CI-built Matrix 3.5.3 release APKs (hybrid Modern hero: Trending carousel on entry with entry focus ON the hero; hero is its own focusable element — UP/DOWN hero <-> first row, LEFT/RIGHT flips the carousel, OK opens detail; focus on a row card previews that card again; all 3.5/3.5.1/3.5.2 features unchanged). Draft only — do not publish without review." \
             app/build/outputs/apk/full/release/*.apk
