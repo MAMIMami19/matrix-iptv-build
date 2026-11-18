@@ -1,25 +1,28 @@
-name: Build Matrix 3.5.3
+name: Build Matrix 3.5.4
 
-# Matrix 3.5.3: hybrid hero on top of 3.5.2. The 3.5.2 carousel worked
-# (Trending on entry, auto-advancing every 10s) but the hero no longer
-# followed focus at all, and the user wants BOTH: the Trending carousel
-# on entry, the hero as its own focusable element (entry focus starts
-# ON the hero; UP/DOWN moves hero <-> first row; LEFT/RIGHT flips the
-# carousel; OK opens the detail), and the original Modern behavior back
-# once he moves — when focus is on a row card, the hero previews that
-# card again. Focus on the hero or the top bar shows the carousel.
+# Matrix 3.5.4: fixes the three 3.5.3 on-device failures (verified
+# 2026-11-18 ~22:52): (1) entry focus now starts ON the hero on fresh
+# app entry even for a returning profile with saved focus (3.5.3 gated
+# it on !hasSavedFocus, so Profil 1 never got it); (2) the hero is now
+# a tv-material3 Card, so the gold ring + carousel dots render via the
+# Card's own focusedBorder (the 3.5.3 foundation-focusable wrapper
+# never showed them on-device); (3) UP from the hero requests the top
+# bar's profile button directly (spatial search was a dead key — the
+# pills are alpha-0 while collapsed and the profile circle is outside
+# the hero's vertical beam), and DOWN from the bar returns to the hero.
+# All 3.5.3 passing behavior unchanged.
 # Signing uses the same NUVIO_KEYSTORE_B64 secret as the v2.x/3.0/3.1/
-# 3.2/3.3/3.4/3.5/3.5.1/3.5.2 releases, so this installs OVER Matrix
-# 3.5.2 on box and phone.
+# 3.2/3.3/3.4/3.5/3.5.1/3.5.2/3.5.3 releases, so this installs OVER Matrix
+# 3.5.3 on box and phone.
 on:
   workflow_dispatch:
   push:
-    branches: [matrix-3.5.3-hybrid-hero]
+    branches: [matrix-3.5.4-hero-fixes]
 
 # Serialize runs: two concurrent full-release builds died together when the
 # runner pool cancelled them (runs 43618067580/43618374036); queue instead.
 concurrency:
-  group: matrix-3.5.3-hybrid-hero-build
+  group: matrix-3.5.4-hero-fixes-build
   cancel-in-progress: false
 
 permissions:
@@ -92,9 +95,9 @@ jobs:
           # are invisible to the in-app updater (unauthenticated API calls
           # never see them, and the tag is not a valid version anyway).
           # Delete the draft after the APKs are verified/downloaded.
-          TAG="matrix-3.5.3-draft-${{ github.run_number }}"
+          TAG="matrix-3.5.4-draft-${{ github.run_number }}"
           gh release create "$TAG" \
             --draft \
-            --title "Matrix 3.5.3 draft (CI run ${{ github.run_number }})" \
-            --notes "CI-built Matrix 3.5.3 release APKs (hybrid Modern hero: Trending carousel on entry with entry focus ON the hero; hero is its own focusable element — UP/DOWN hero <-> first row, LEFT/RIGHT flips the carousel, OK opens detail; focus on a row card previews that card again; all 3.5/3.5.1/3.5.2 features unchanged). Draft only — do not publish without review." \
+            --title "Matrix 3.5.4 draft (CI run ${{ github.run_number }})" \
+            --notes "CI-built Matrix 3.5.4 release APKs (fixes the three 3.5.3 on-device failures: entry focus starts ON the hero on fresh app entry even with saved focus; hero is a tv-material3 Card so the gold ring + carousel dots render; UP from the hero reaches the top bar, DOWN from the bar returns to the hero; all 3.5.3 passing behavior unchanged). Draft only — do not publish without review." \
             app/build/outputs/apk/full/release/*.apk

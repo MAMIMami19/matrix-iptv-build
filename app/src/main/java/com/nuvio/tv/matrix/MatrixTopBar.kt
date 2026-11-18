@@ -26,7 +26,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -45,8 +51,11 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Text
 import com.nuvio.tv.DrawerItem
 import com.nuvio.tv.DrawerItemIcon
+import com.nuvio.tv.HeroFocusRequesterHolder
 import com.nuvio.tv.LocalContentFocusRequester
+import com.nuvio.tv.LocalHeroFocusRequesterHolder
 import com.nuvio.tv.LocalSidebarExpanded
+import com.nuvio.tv.LocalTopBarFocusRequester
 import com.nuvio.tv.R
 import com.nuvio.tv.navigateToDrawerRoute
 import com.nuvio.tv.ui.components.BrandWordmark
@@ -95,6 +104,14 @@ fun MatrixTopBarScaffold(
 ) {
     val showTopBar = currentRoute in rootRoutes
     val contentFocusRequester = remember { FocusRequester() }
+    // Matrix 3.5.4: the hero's UP handler requests the top bar through
+    // this (attached to the profile circle below); the home screen
+    // publishes its hero requester into the holder so DOWN from the
+    // bar returns to the hero. The holder is passed as a parameter —
+    // the bar is a sibling of the NavHost, not a descendant, so a
+    // CompositionLocal provided to the NavHost would not reach it.
+    val topBarFocusRequester = remember { FocusRequester() }
+    val heroFocusHolder = remember { HeroFocusRequesterHolder() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     BackHandler(enabled = currentRoute in rootRoutes) {
@@ -105,6 +122,8 @@ fun MatrixTopBarScaffold(
         CompositionLocalProvider(
             LocalSidebarExpanded provides false,
             LocalContentFocusRequester provides contentFocusRequester,
+            LocalTopBarFocusRequester provides topBarFocusRequester,
+            LocalHeroFocusRequesterHolder provides heroFocusHolder,
         ) {
             NuvioNavHost(
                 navController = navController,
@@ -133,6 +152,8 @@ fun MatrixTopBarScaffold(
                 activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
                 showProfileSelector = showProfileSelector,
                 onSwitchProfile = onSwitchProfile,
+                topBarFocusRequester = topBarFocusRequester,
+                heroFocusHolder = heroFocusHolder,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
         }
@@ -169,6 +190,8 @@ private fun MatrixTopNavBar(
     activeProfileAvatarImageUrl: String?,
     showProfileSelector: Boolean,
     onSwitchProfile: () -> Unit,
+    topBarFocusRequester: FocusRequester,
+    heroFocusHolder: HeroFocusRequesterHolder,
     modifier: Modifier = Modifier,
 ) {
     var barHasFocus by remember { mutableStateOf(false) }
@@ -184,6 +207,22 @@ private fun MatrixTopNavBar(
         modifier = modifier
             .fillMaxWidth()
             .onFocusChanged { barHasFocus = it.hasFocus }
+            // Matrix 3.5.4: DOWN from the bar returns to the hero.
+            // Spatial search would land on the first row instead (the
+            // hero wrapper vertically overlaps the bar, so it is not
+            // "below" it), and the hero is the hub of the home
+            // round-trip: bar <-> hero <-> rows. Off the home route
+            // the holder is empty and this falls through to spatial
+            // search, as before.
+            .onPreviewKeyEvent { event ->
+                if (event.key != Key.DirectionDown || event.type != KeyEventType.KeyDown) {
+                    return@onPreviewKeyEvent false
+                }
+                if (event.nativeKeyEvent.repeatCount != 0) return@onPreviewKeyEvent false
+                val requester = heroFocusHolder.requester ?: return@onPreviewKeyEvent false
+                if (!heroFocusHolder.isFocusable()) return@onPreviewKeyEvent false
+                runCatching { requester.requestFocus() }.getOrDefault(false)
+            }
             .background(
                 Brush.verticalGradient(
                     listOf(
@@ -251,6 +290,7 @@ private fun MatrixTopNavBar(
                     profileColorHex = activeProfileColorHex,
                     profileAvatarImageUrl = activeProfileAvatarImageUrl,
                     onClick = onSwitchProfile,
+                    focusRequester = topBarFocusRequester,
                 )
             }
         }
@@ -432,6 +472,7 @@ private fun TopNavProfileItem(
     profileColorHex: String,
     profileAvatarImageUrl: String?,
     onClick: () -> Unit,
+    focusRequester: FocusRequester? = null,
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val itemScale by animateFloatAsState(
@@ -444,6 +485,7 @@ private fun TopNavProfileItem(
         onClick = onClick,
         modifier = Modifier
             .size(40.dp)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .graphicsLayer {
                 scaleX = itemScale
                 scaleY = itemScale

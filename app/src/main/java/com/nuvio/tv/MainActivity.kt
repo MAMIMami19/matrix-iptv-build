@@ -225,6 +225,26 @@ val LocalSidebarExpanded = compositionLocalOf { false }
 val LocalRootContentInset = compositionLocalOf { 0.dp }
 val LocalContentFocusRequester = compositionLocalOf { FocusRequester.Default }
 
+// Matrix 3.5.4: the top-bar focus requester — the hero's UP handler
+// requests it to reach the top bar. Spatial search can't get there from
+// the hero: the pills are alpha-0 while the bar is collapsed and the
+// profile circle sits outside the hero's vertical beam, so UP was a
+// dead key in 3.5.3. Provided by MatrixTopBarScaffold, attached to the
+// profile circle (focusing it fades the whole bar in).
+val LocalTopBarFocusRequester = compositionLocalOf { FocusRequester.Default }
+
+// Matrix 3.5.4: holder the home screen uses to publish its hero focus
+// requester upward to the top bar, so DOWN from the bar returns to the
+// hero. The scaffold owns the holder; ModernHomeContent fills it while
+// composed and clears it on dispose. A null requester (or isFocusable
+// false) means "no hero to return to" — the bar falls back to spatial
+// search, which lands on the first row.
+class HeroFocusRequesterHolder {
+    var requester: FocusRequester? = null
+    var isFocusable: () -> Boolean = { false }
+}
+val LocalHeroFocusRequesterHolder = compositionLocalOf<HeroFocusRequesterHolder?> { null }
+
 data class SplashBackground(
     val profileColorHex: String? = null,
     val backgroundUrl: String? = null,
