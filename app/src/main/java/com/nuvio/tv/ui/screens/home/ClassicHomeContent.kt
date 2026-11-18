@@ -44,6 +44,12 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.nativeKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import com.nuvio.tv.ui.util.dpadVerticalFastScroll
 import com.nuvio.tv.ui.util.asStable
@@ -592,7 +598,47 @@ fun ClassicHomeContent(
                     }
                     null // Classic uses imperative requestFocus
                 },
-            ),
+            )
+            // Matrix 3.5: UP from the topmost content row lands on the
+            // hero carousel instead of jumping straight to the top bar
+            // (3.4: UP skipped the hero entirely — the bar stays
+            // focusable while invisible, so spatial search preferred
+            // it). Single presses only: held UP is the fast-scroll
+            // drag, whose landing already maps the hero item to
+            // heroFocusRequester (now always attached, see above).
+            .onPreviewKeyEvent { event ->
+                if (!heroVisible) return@onPreviewKeyEvent false
+                if (event.key != Key.DirectionUp || event.type != KeyEventType.KeyDown) {
+                    return@onPreviewKeyEvent false
+                }
+                if (event.nativeKeyEvent.repeatCount != 0) return@onPreviewKeyEvent false
+                // The topmost content row: Continue Watching if it has
+                // items, else Upcoming, else the first home row
+                // (rowIndex 0). Only intercept UP from that row — UP
+                // from any lower row must move to the row above.
+                val hasCw = uiState.continueWatchingEnabled &&
+                    uiState.continueWatchingItems.isNotEmpty()
+                val hasUpcoming = uiState.continueWatchingEnabled &&
+                    uiState.upcomingItems.isNotEmpty()
+                val onTopRow = when {
+                    hasCw -> currentFocusSnapshot.rowKey == "continue_watching"
+                    hasUpcoming -> currentFocusSnapshot.rowKey == "upcoming_section"
+                    else -> currentFocusSnapshot.rowIndex == 0
+                }
+                if (!onTopRow) return@onPreviewKeyEvent false
+                // The hero must be scrolled into view (or just above).
+                if (columnListState.firstVisibleItemIndex > 1) return@onPreviewKeyEvent false
+                scope.launch {
+                    columnListState.scrollToItem(0)
+                    repeat(6) {
+                        val ok = runCatching { heroFocusRequester.requestFocus() }
+                            .getOrDefault(false)
+                        if (ok) return@launch
+                        withFrameNanos { }
+                    }
+                }
+                true
+            },
         contentPadding = PaddingValues(top = if (heroVisible) NuvioTheme.spacing.none else NuvioTheme.spacing.xl, bottom = NuvioTheme.spacing.xl),
         verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxl)
     ) {
@@ -600,7 +646,11 @@ fun ClassicHomeContent(
             item(key = "hero_carousel", contentType = "hero") {
                 HeroCarousel(
                     items = uiState.heroItems.asStable(),
-                    focusRequester = if (shouldRequestInitialFocus || shouldRestoreHeroFocus) heroFocusRequester else null,
+                    // Matrix 3.5: the hero requester is ALWAYS attached
+                    // (was: only during initial/restore focus) so the
+                    // fast-scroll landing and the UP interception below
+                    // can focus the hero at any time.
+                    focusRequester = heroFocusRequester,
                     showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
                     mdbListShowOnHero = uiState.mdbListShowOnHero,
                     mdbListRatingOrder = uiState.mdbListRatingOrder,

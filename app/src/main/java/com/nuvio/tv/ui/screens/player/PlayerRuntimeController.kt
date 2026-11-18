@@ -54,6 +54,7 @@ import com.nuvio.tv.domain.repository.StreamRepository
 import com.nuvio.tv.matrix.iptv.FavoriteChannel
 import com.nuvio.tv.matrix.iptv.IptvChannelHandoff
 import com.nuvio.tv.matrix.iptv.IptvSettingsRepository
+import com.nuvio.tv.matrix.iptv.XtreamClient
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import androidx.media3.session.MediaSession
 import kotlinx.coroutines.CoroutineScope
@@ -243,6 +244,8 @@ class PlayerRuntimeController(
                     name = current.name,
                     iconUrl = current.icon,
                     groupName = current.groupName,
+                    // Matrix 3.5: tag the source — stream ids collide across lines.
+                    sourceIndex = XtreamClient.selectedSourceIndex.value,
                 )
             )
         }

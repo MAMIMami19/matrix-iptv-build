@@ -11,6 +11,11 @@ import kotlinx.serialization.json.Json
  * One favorite Live TV channel. The full mini-record is stored (not just the
  * id) so the Favoris section can render and play without re-fetching the
  * whole channel catalog. Scope is Live TV channels only.
+ *
+ * Matrix 3.5: [sourceIndex] tags which Xtream source the channel came
+ * from — stream ids collide across lines, so favorites/recents only
+ * show (and play) on their own source. Defaults to 0, so records
+ * stored by 3.4 and earlier decode as default-line channels.
  */
 @Serializable
 internal data class FavoriteChannel(
@@ -18,6 +23,7 @@ internal data class FavoriteChannel(
     val name: String = "",
     val iconUrl: String? = null,
     val groupName: String? = null,
+    val sourceIndex: Int = 0,
 )
 
 /**
@@ -66,6 +72,14 @@ internal object IptvSettingsRepository {
     private val _sessionUnlocked = MutableStateFlow(false)
     val sessionUnlocked: StateFlow<Boolean> = _sessionUnlocked.asStateFlow()
 
+    /**
+     * Matrix 3.5 — the selected Xtream source index (0 = default line),
+     * persisted. Clamped to the compiled-in lines whenever it is read
+     * back or set, so a stale index can never point past the last line.
+     */
+    private val _selectedSourceIndex = MutableStateFlow(0)
+    val selectedSourceIndex: StateFlow<Int> = _selectedSourceIndex.asStateFlow()
+
     /** (videoId, parentMetaId) pairs played in this IPTV session. */
     private val playedIptvKeys = mutableSetOf<Pair<String, String>>()
 
@@ -98,6 +112,23 @@ internal object IptvSettingsRepository {
             IptvSettingsStorage.loadRecentChannels()?.let { raw ->
                 runCatching { Json.decodeFromString<List<FavoriteChannel>>(raw) }.getOrNull()
             }.orEmpty().take(MAX_RECENT_CHANNELS)
+        _selectedSourceIndex.value = clampSourceIndex(
+            IptvSettingsStorage.loadSelectedSourceIndex() ?: 0,
+        )
+    }
+
+    private fun clampSourceIndex(index: Int): Int {
+        val count = XtreamConfig.sources.size
+        if (count == 0) return 0
+        return index.coerceIn(0, count - 1)
+    }
+
+    fun setSelectedSourceIndex(index: Int) {
+        ensureLoaded()
+        val clamped = clampSourceIndex(index)
+        if (_selectedSourceIndex.value == clamped) return
+        _selectedSourceIndex.value = clamped
+        IptvSettingsStorage.saveSelectedSourceIndex(clamped)
     }
 
     fun setLockAdultCategories(enabled: Boolean) {
@@ -132,21 +163,21 @@ internal object IptvSettingsRepository {
     fun recordRecentChannel(channel: FavoriteChannel) {
         ensureLoaded()
         val current = _recentChannels.value
-        if (current.firstOrNull()?.streamId == channel.streamId) return
-        val updated = (listOf(channel) + current.filterNot { it.streamId == channel.streamId })
+        if (current.firstOrNull()?.let { it.streamId == channel.streamId && it.sourceIndex == channel.sourceIndex } == true) return
+        val updated = (listOf(channel) + current.filterNot { it.streamId == channel.streamId && it.sourceIndex == channel.sourceIndex })
             .take(MAX_RECENT_CHANNELS)
         _recentChannels.value = updated
         IptvSettingsStorage.saveRecentChannels(Json.encodeToString(updated))
     }
 
-    fun isFavoriteChannel(streamId: Int): Boolean =
-        _favoriteChannels.value.any { it.streamId == streamId }
+    fun isFavoriteChannel(streamId: Int, sourceIndex: Int = _selectedSourceIndex.value): Boolean =
+        _favoriteChannels.value.any { it.streamId == streamId && it.sourceIndex == sourceIndex }
 
     fun toggleFavoriteChannel(channel: FavoriteChannel) {
         ensureLoaded()
         val current = _favoriteChannels.value
-        val updated = if (current.any { it.streamId == channel.streamId }) {
-            current.filterNot { it.streamId == channel.streamId }
+        val updated = if (current.any { it.streamId == channel.streamId && it.sourceIndex == channel.sourceIndex }) {
+            current.filterNot { it.streamId == channel.streamId && it.sourceIndex == channel.sourceIndex }
         } else {
             current + channel
         }

@@ -135,8 +135,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 24
         targetSdk = 36
-        versionCode = 12
-        versionName = "3.4"
+        versionCode = 13
+        versionName = "3.5"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
@@ -156,6 +156,16 @@ android {
         buildConfigField("String", "XTREAM_SERVER", buildConfigString(localProperties.getProperty("NUVIO_XTREAM_SERVER", "")))
         buildConfigField("String", "XTREAM_USERNAME", buildConfigString(localProperties.getProperty("NUVIO_XTREAM_USER", "")))
         buildConfigField("String", "XTREAM_PASSWORD", buildConfigString(localProperties.getProperty("NUVIO_XTREAM_PASS", "")))
+        // Matrix 3.5: three extra backup Xtream lines (same CI-secret pattern).
+        buildConfigField("String", "XTREAM2_SERVER", buildConfigString(localProperties.getProperty("NUVIO_XTREAM2_SERVER", "")))
+        buildConfigField("String", "XTREAM2_USERNAME", buildConfigString(localProperties.getProperty("NUVIO_XTREAM2_USER", "")))
+        buildConfigField("String", "XTREAM2_PASSWORD", buildConfigString(localProperties.getProperty("NUVIO_XTREAM2_PASS", "")))
+        buildConfigField("String", "XTREAM3_SERVER", buildConfigString(localProperties.getProperty("NUVIO_XTREAM3_SERVER", "")))
+        buildConfigField("String", "XTREAM3_USERNAME", buildConfigString(localProperties.getProperty("NUVIO_XTREAM3_USER", "")))
+        buildConfigField("String", "XTREAM3_PASSWORD", buildConfigString(localProperties.getProperty("NUVIO_XTREAM3_PASS", "")))
+        buildConfigField("String", "XTREAM4_SERVER", buildConfigString(localProperties.getProperty("NUVIO_XTREAM4_SERVER", "")))
+        buildConfigField("String", "XTREAM4_USERNAME", buildConfigString(localProperties.getProperty("NUVIO_XTREAM4_USER", "")))
+        buildConfigField("String", "XTREAM4_PASSWORD", buildConfigString(localProperties.getProperty("NUVIO_XTREAM4_PASS", "")))
         buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "https://nuvio.tv/tv-login")}\"")
         buildConfigField("String", "DEVICE_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("DEVICE_LOGIN_WEB_BASE_URL", "https://nuvio.tv/link")}\"")
         buildConfigField("boolean", "DOVI_NATIVE_ENABLED", enableDoviNative.toString())

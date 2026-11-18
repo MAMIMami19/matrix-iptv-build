@@ -30,8 +30,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.nativeKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -139,11 +146,13 @@ internal fun IptvChannelsSidePanel(
             .orEmpty()
     }
 
-    val favoriteIds = remember(favorites) { favorites.map { it.streamId }.toSet() }
+    // Matrix 3.5: favorites/recents belong to the source they came from —
+    // stream ids collide across lines, so only this source's records play.
+    val sourceIndex by XtreamClient.selectedSourceIndex.collectAsState()
     // Recents/favorites carry no stream URL; rebuild it the same way the
     // Live TV tab does so the rows play through the same path.
-    val recentRefs = remember(recents) {
-        recents.map {
+    val recentRefs = remember(recents, sourceIndex) {
+        recents.filter { it.sourceIndex == sourceIndex }.map {
             IptvChannelRef(
                 it.streamId,
                 it.name,
@@ -153,8 +162,8 @@ internal fun IptvChannelsSidePanel(
             )
         }
     }
-    val favoriteRefs = remember(favorites) {
-        favorites.map {
+    val favoriteRefs = remember(favorites, sourceIndex) {
+        favorites.filter { it.sourceIndex == sourceIndex }.map {
             IptvChannelRef(
                 it.streamId,
                 it.name,
@@ -164,6 +173,7 @@ internal fun IptvChannelsSidePanel(
             )
         }
     }
+    val favoriteIds = remember(favoriteRefs) { favoriteRefs.map { it.streamId }.toSet() }
     val recentsTitle = stringResource(R.string.iptv_panel_recently_watched)
     val favoritesTitle = stringResource(R.string.iptv_panel_favourites)
     val allTitle = stringResource(R.string.iptv_panel_all_channels)
@@ -223,10 +233,49 @@ internal fun IptvChannelsSidePanel(
             ?: entries.indexOfFirst { it is PanelEntry.Channel }.coerceAtLeast(0)
     }
 
-    LaunchedEffect(entries, initialEntryIndex) {
+    // Matrix 3.5 — section jump. The panel is one flat list; with the
+    // full 12,508-channel catalog the Groups/Favorites/Recents sections
+    // sit below ALL channels, practically unreachable by DOWN-stepping.
+    // LEFT/RIGHT jumps focus straight to the previous/next section's
+    // first row (the player lets the open panel handle all keys, and the
+    // vertical list has no horizontal targets, so these keys were free).
+    // The target is section-based, not an index, so it stays valid when
+    // the entries rebuild (groups loading, group pick).
+    var jumpSection by remember { mutableStateOf<String?>(null) }
+    var jumpNonce by remember { mutableStateOf(0) }
+    var focusedSection by remember { mutableStateOf<String?>(null) }
+    val sectionOrder = remember(entries) {
+        buildList {
+            if (entries.any { it is PanelEntry.Channel && it.section == "shown" }) add("shown")
+            if (entries.any { it is PanelEntry.Group }) add("groups")
+            if (entries.any { it is PanelEntry.Channel && it.section == "fav" }) add("fav")
+            if (entries.any { it is PanelEntry.Channel && it.section == "recent" }) add("recent")
+        }
+    }
+    fun sectionFirstRowIndex(section: String): Int =
+        entries.indexOfFirst { entry ->
+            when (entry) {
+                is PanelEntry.Channel -> entry.section == section
+                is PanelEntry.Group -> section == "groups"
+                else -> false
+            }
+        }
+    val jumpTargetIndex = jumpSection
+        ?.let { sectionFirstRowIndex(it) }
+        ?.takeIf { it >= 0 }
+    val focusTargetIndex = jumpTargetIndex ?: initialEntryIndex
+    // When jumping, scroll to the section header (one above the first
+    // row) so the header stays visible; focus goes to the first row.
+    val scrollTargetIndex = if (jumpTargetIndex != null) {
+        (jumpTargetIndex - 1).coerceAtLeast(0)
+    } else {
+        focusTargetIndex
+    }
+
+    LaunchedEffect(entries, focusTargetIndex, jumpNonce) {
         if (entries.isEmpty()) return@LaunchedEffect
         runCatching {
-            listState.scrollToItem(initialEntryIndex)
+            listState.scrollToItem(scrollTargetIndex)
             delay(32)
             channelsFocusRequester.requestFocus()
         }
@@ -239,6 +288,8 @@ internal fun IptvChannelsSidePanel(
                 name = channel.name,
                 iconUrl = channel.icon,
                 groupName = channel.groupName,
+                // Matrix 3.5: tag the source — stream ids collide across lines.
+                sourceIndex = XtreamClient.selectedSourceIndex.value,
             ),
         )
     }
@@ -259,6 +310,25 @@ internal fun IptvChannelsSidePanel(
                     )
                 )
             )
+            // Matrix 3.5: LEFT/RIGHT jumps between sections (see above).
+            .onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                if (event.nativeKeyEvent.repeatCount != 0) return@onPreviewKeyEvent false
+                val direction = when (event.key) {
+                    Key.DirectionLeft -> -1
+                    Key.DirectionRight -> 1
+                    else -> return@onPreviewKeyEvent false
+                }
+                val order = sectionOrder
+                if (order.size < 2) return@onPreviewKeyEvent false
+                val current = focusedSection?.let { order.indexOf(it) }
+                    ?.takeIf { it >= 0 } ?: 0
+                val next = (current + direction).coerceIn(0, order.lastIndex)
+                if (next == current) return@onPreviewKeyEvent false
+                jumpSection = order[next]
+                jumpNonce++
+                true
+            }
     ) {
         Column(modifier = Modifier.padding(NuvioTheme.spacing.xl)) {
             Row(
@@ -282,6 +352,13 @@ internal fun IptvChannelsSidePanel(
 
             Text(
                 text = stringResource(R.string.iptv_long_press_favorite_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = NuvioTheme.colors.TextSecondary,
+            )
+
+            // Matrix 3.5: LEFT/RIGHT jumps between sections.
+            Text(
+                text = stringResource(R.string.iptv_panel_sections_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = NuvioTheme.colors.TextSecondary,
             )
@@ -320,12 +397,17 @@ internal fun IptvChannelsSidePanel(
                                 count = entry.count,
                                 isSelected = entry.isSelected,
                                 onClick = {
+                                    // Matrix 3.5: clear any section jump —
+                                    // after picking a group, focus follows
+                                    // the new list's initial entry.
+                                    jumpSection = null
                                     selectedGroup = if (entry.categoryId.isEmpty()) {
                                         null
                                     } else {
                                         groups?.find { it.categoryId == entry.categoryId }
                                     }
                                 },
+                                onFocused = { focusedSection = "groups" },
                             )
                             is PanelEntry.Channel -> IptvChannelPanelItem(
                                 channel = entry.ref,
@@ -333,7 +415,8 @@ internal fun IptvChannelsSidePanel(
                                 isCurrent = entry.ref.streamId == currentId,
                                 isFavorite = entry.ref.streamId in favoriteIds,
                                 focusRequester = channelsFocusRequester,
-                                requestInitialFocus = index == initialEntryIndex,
+                                requestFocus = index == focusTargetIndex,
+                                onFocused = { focusedSection = entry.section },
                                 onClick = {
                                     // The next player's list is the list
                                     // the channel was picked from.
@@ -386,7 +469,8 @@ private fun IptvChannelPanelItem(
     isCurrent: Boolean,
     isFavorite: Boolean,
     focusRequester: FocusRequester,
-    requestInitialFocus: Boolean,
+    requestFocus: Boolean,
+    onFocused: () -> Unit,
     onClick: () -> Unit,
     onFavoriteToggle: () -> Unit,
 ) {
@@ -395,7 +479,8 @@ private fun IptvChannelPanelItem(
         onLongClick = onFavoriteToggle,
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (requestInitialFocus) Modifier.focusRequester(focusRequester) else Modifier),
+            .then(if (requestFocus) Modifier.focusRequester(focusRequester) else Modifier)
+            .onFocusChanged { if (it.isFocused) onFocused() },
         colors = CardDefaults.colors(
             containerColor = if (isCurrent) {
                 NuvioTheme.colors.FocusBackground.copy(alpha = 0.55f)
@@ -474,10 +559,12 @@ private fun IptvGroupPanelItem(
     count: Int,
     isSelected: Boolean,
     onClick: () -> Unit,
+    onFocused: () -> Unit = {},
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
+            .onFocusChanged { if (it.isFocused) onFocused() },
         colors = CardDefaults.colors(
             containerColor = if (isSelected) {
                 NuvioTheme.colors.FocusBackground.copy(alpha = 0.55f)

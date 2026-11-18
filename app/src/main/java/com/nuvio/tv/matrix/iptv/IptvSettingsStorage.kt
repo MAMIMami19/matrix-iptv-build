@@ -18,6 +18,7 @@ internal object IptvSettingsStorage {
     private const val iptvPinKey = "iptv_pin"
     private const val favoriteChannelsKey = "iptv_favorite_channels"
     private const val recentChannelsKey = "iptv_recent_channels"
+    private const val selectedSourceIndexKey = "iptv_selected_source_index"
 
     private var preferences: SharedPreferences? = null
 
@@ -54,4 +55,16 @@ internal object IptvSettingsStorage {
     /** JSON array of recently watched Live TV channels, most recent first (see FavoriteChannel). */
     fun loadRecentChannels(): String? = loadString(recentChannelsKey)
     fun saveRecentChannels(json: String) = saveString(recentChannelsKey, json)
+    /** Matrix 3.5: the selected Xtream source index (0 = default line). */
+    fun loadSelectedSourceIndex(): Int? {
+        val prefs = preferences ?: return null
+        return if (prefs.contains(selectedSourceIndexKey)) {
+            prefs.getInt(selectedSourceIndexKey, 0)
+        } else {
+            null
+        }
+    }
+    fun saveSelectedSourceIndex(index: Int) {
+        preferences?.edit()?.putInt(selectedSourceIndexKey, index)?.apply()
+    }
 }

@@ -1,22 +1,21 @@
-name: Build Matrix 3.4
+name: Build Matrix 3.5
 
-# Matrix 3.4: hero shows Trending on entry; in-player channel panel gains
-# groups + favorites picker, opens with LEFT or RIGHT, recents at the
-# bottom; visible top-bar focus state on Live TV + Search; IPTV search
-# focus-trap fix; Arabic IPTV tabs; Shahid + TOD home row. Off the 3.3
-# branch, so the TouchClickBridge is included (harmless on the box —
-# DPAD unchanged). Signing uses the same NUVIO_KEYSTORE_B64 secret as
-# the v2.x/3.0/3.1/3.2/3.3 releases, so this installs OVER Matrix 3.3
-# on box and phone.
+# Matrix 3.5: multi-source IPTV (3 backup Xtream lines + a source
+# switcher in the IPTV screen); brown-gold focus on the IPTV channel
+# list, category rail and tabs; IPTV Settings tab removed; hero
+# force-loads Trending and UP from the top row lands on the hero;
+# in-player panel gains LEFT/RIGHT section jump. Off the 3.4 branch.
+# Signing uses the same NUVIO_KEYSTORE_B64 secret as the v2.x/3.0/3.1/
+# 3.2/3.3/3.4 releases, so this installs OVER Matrix 3.4 on box and phone.
 on:
   workflow_dispatch:
   push:
-    branches: [matrix-3.4-hero-trending]
+    branches: [matrix-3.5-multi-source]
 
 # Serialize runs: two concurrent full-release builds died together when the
 # runner pool cancelled them (runs 43618067580/43618374036); queue instead.
 concurrency:
-  group: matrix-3.4-hero-build
+  group: matrix-3.5-multi-source-build
   cancel-in-progress: false
 
 permissions:
@@ -46,6 +45,15 @@ jobs:
             echo "NUVIO_XTREAM_SERVER=${{ secrets.NUVIO_XTREAM_SERVER }}"
             echo "NUVIO_XTREAM_USER=${{ secrets.NUVIO_XTREAM_USER }}"
             echo "NUVIO_XTREAM_PASS=${{ secrets.NUVIO_XTREAM_PASS }}"
+            echo "NUVIO_XTREAM2_SERVER=${{ secrets.NUVIO_XTREAM2_SERVER }}"
+            echo "NUVIO_XTREAM2_USER=${{ secrets.NUVIO_XTREAM2_USER }}"
+            echo "NUVIO_XTREAM2_PASS=${{ secrets.NUVIO_XTREAM2_PASS }}"
+            echo "NUVIO_XTREAM3_SERVER=${{ secrets.NUVIO_XTREAM3_SERVER }}"
+            echo "NUVIO_XTREAM3_USER=${{ secrets.NUVIO_XTREAM3_USER }}"
+            echo "NUVIO_XTREAM3_PASS=${{ secrets.NUVIO_XTREAM3_PASS }}"
+            echo "NUVIO_XTREAM4_SERVER=${{ secrets.NUVIO_XTREAM4_SERVER }}"
+            echo "NUVIO_XTREAM4_USER=${{ secrets.NUVIO_XTREAM4_USER }}"
+            echo "NUVIO_XTREAM4_PASS=${{ secrets.NUVIO_XTREAM4_PASS }}"
             echo "NUVIO_RELEASE_STORE_FILE=$RUNNER_TEMP/release.keystore"
             echo "NUVIO_RELEASE_STORE_PASSWORD=${{ secrets.NUVIO_RELEASE_STORE_PASSWORD }}"
             echo "NUVIO_RELEASE_KEY_ALIAS=${{ secrets.NUVIO_RELEASE_KEY_ALIAS }}"
@@ -80,9 +88,9 @@ jobs:
           # are invisible to the in-app updater (unauthenticated API calls
           # never see them, and the tag is not a valid version anyway).
           # Delete the draft after the APKs are verified/downloaded.
-          TAG="matrix-3.4-draft-${{ github.run_number }}"
+          TAG="matrix-3.5-draft-${{ github.run_number }}"
           gh release create "$TAG" \
             --draft \
-            --title "Matrix 3.4 draft (CI run ${{ github.run_number }})" \
-            --notes "CI-built Matrix 3.4 release APKs (hero Trending, in-player groups panel, top-bar focus, search-trap fix, Arabic tabs, Shahid+TOD row). Draft only — do not publish without review." \
+            --title "Matrix 3.5 draft (CI run ${{ github.run_number }})" \
+            --notes "CI-built Matrix 3.5 release APKs (multi-source IPTV, brown-gold IPTV focus, Settings tab removed, hero Trending + UP-to-hero, panel section jump). Draft only — do not publish without review." \
             app/build/outputs/apk/full/release/*.apk

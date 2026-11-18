@@ -55,12 +55,18 @@ internal data class XtreamSeriesInfo(
 )
 
 /**
- * Minimal Xtream Codes client for the embedded Matrix line.
+ * Minimal Xtream Codes client for the embedded Matrix lines.
  *
  * Ported from the 0.6.3-based Matrix build (Ktor -> OkHttp, the new base's
  * HTTP stack). Server + credentials come from the compiled-in [XtreamConfig].
  * They are never logged: error surfaces show generic text only, never
  * exception messages, because transport errors can embed request URLs.
+ *
+ * Matrix 3.5 — multi-source: every call goes through the currently
+ * selected source ([selectedSourceIndex], persisted in
+ * [IptvSettingsRepository]). The whole-catalog cache is keyed per
+ * source so switching lines never serves another line's catalog.
+ * Callers keep the same API; only the routing changed.
  */
 internal object XtreamClient {
     private val json = Json { ignoreUnknownKeys = true }
@@ -71,25 +77,54 @@ internal object XtreamClient {
             .build()
     }
 
+    /** The selected source index (0 = default line). Persisted. */
+    val selectedSourceIndex: kotlinx.coroutines.flow.StateFlow<Int>
+        get() = IptvSettingsRepository.selectedSourceIndex
+
+    private fun currentSource(): XtreamSource {
+        IptvSettingsRepository.ensureLoaded()
+        val configured = XtreamConfig.sources
+        if (configured.isEmpty()) return XtreamSource("", "", "")
+        val index = IptvSettingsRepository.selectedSourceIndex.value
+            .coerceIn(0, configured.lastIndex)
+        return configured[index]
+    }
+
+    /** The index [currentSource] resolves to (clamped to the configured lines). */
+    private fun currentSourceIndex(): Int {
+        // Load first: the cache key and the fetch must agree on the
+        // index, or a fetch could be stored under another source's key.
+        IptvSettingsRepository.ensureLoaded()
+        val configured = XtreamConfig.sources
+        if (configured.isEmpty()) return 0
+        return IptvSettingsRepository.selectedSourceIndex.value
+            .coerceIn(0, configured.lastIndex)
+    }
+
     // Process-lifetime cache for the whole-catalog calls: the catalogs are
     // large (10k+ channels) and the IPTV tabs re-enter often. Per-category
-    // calls stay fresh. A process restart refreshes everything.
+    // calls stay fresh. A process restart refreshes everything. Keys are
+    // prefixed with the source index (3.5 multi-source).
     private val cache = mutableMapOf<String, List<*>>()
+
+    private fun cacheKey(key: String): String = "${currentSourceIndex()}:$key"
 
     @Suppress("UNCHECKED_CAST")
     private suspend fun <T> cached(key: String, fetch: suspend () -> List<T>): List<T> {
-        val hit = synchronized(cache) { cache[key] as? List<T> }
+        val scopedKey = cacheKey(key)
+        val hit = synchronized(cache) { cache[scopedKey] as? List<T> }
         if (hit != null) return hit
         val fresh = fetch()
-        synchronized(cache) { cache[key] = fresh }
+        synchronized(cache) { cache[scopedKey] = fresh }
         return fresh
     }
 
     private fun apiUrl(action: String, vararg params: Pair<String, String>): String {
-        val base = XtreamConfig.SERVER.trimEnd('/')
+        val source = currentSource()
+        val base = source.server.trimEnd('/')
         val builder = "$base/player_api.php".toHttpUrl().newBuilder()
-            .addQueryParameter("username", XtreamConfig.USERNAME)
-            .addQueryParameter("password", XtreamConfig.PASSWORD)
+            .addQueryParameter("username", source.username)
+            .addQueryParameter("password", source.password)
             .addQueryParameter("action", action)
         params.forEach { (key, value) -> builder.addQueryParameter(key, value) }
         return builder.build().toString()
@@ -138,7 +173,7 @@ internal object XtreamClient {
      */
     @Suppress("UNCHECKED_CAST")
     fun cachedVodStreams(): List<XtreamVodStream>? =
-        synchronized(cache) { cache["vod_all"] as? List<XtreamVodStream> }
+        synchronized(cache) { cache[cacheKey("vod_all")] as? List<XtreamVodStream> }
 
     /**
      * Matrix 3.4: the already-cached whole live catalog, or null if it
@@ -147,12 +182,12 @@ internal object XtreamClient {
      */
     @Suppress("UNCHECKED_CAST")
     fun cachedLiveStreams(): List<XtreamLiveStream>? =
-        synchronized(cache) { cache["live_all"] as? List<XtreamLiveStream> }
+        synchronized(cache) { cache[cacheKey("live_all")] as? List<XtreamLiveStream> }
 
     /** Same as [cachedVodStreams] for the whole series catalog. */
     @Suppress("UNCHECKED_CAST")
     fun cachedSeries(): List<XtreamSeries>? =
-        synchronized(cache) { cache["series_all"] as? List<XtreamSeries> }
+        synchronized(cache) { cache[cacheKey("series_all")] as? List<XtreamSeries> }
 
     suspend fun seriesCategories(): List<XtreamCategory> =
         cached("series_categories") { json.decodeFromString(getText("get_series_categories")) }
@@ -167,17 +202,23 @@ internal object XtreamClient {
     suspend fun seriesInfo(seriesId: Int): XtreamSeriesInfo =
         json.decodeFromString(getText("get_series_info", "series_id" to seriesId.toString()))
 
-    fun liveStreamUrl(streamId: Int): String =
-        XtreamConfig.SERVER.trimEnd('/') +
-            "/live/${XtreamConfig.USERNAME}/${XtreamConfig.PASSWORD}/$streamId.ts"
+    fun liveStreamUrl(streamId: Int): String {
+        val source = currentSource()
+        return source.server.trimEnd('/') +
+            "/live/${source.username}/${source.password}/$streamId.ts"
+    }
 
-    fun movieStreamUrl(streamId: Int, containerExtension: String?): String =
-        XtreamConfig.SERVER.trimEnd('/') +
-            "/movie/${XtreamConfig.USERNAME}/${XtreamConfig.PASSWORD}/" +
+    fun movieStreamUrl(streamId: Int, containerExtension: String?): String {
+        val source = currentSource()
+        return source.server.trimEnd('/') +
+            "/movie/${source.username}/${source.password}/" +
             "$streamId.${containerExtension?.takeIf { it.isNotBlank() } ?: "mp4"}"
+    }
 
-    fun episodeStreamUrl(episodeId: Int, containerExtension: String?): String =
-        XtreamConfig.SERVER.trimEnd('/') +
-            "/series/${XtreamConfig.USERNAME}/${XtreamConfig.PASSWORD}/" +
+    fun episodeStreamUrl(episodeId: Int, containerExtension: String?): String {
+        val source = currentSource()
+        return source.server.trimEnd('/') +
+            "/series/${source.username}/${source.password}/" +
             "$episodeId.${containerExtension?.takeIf { it.isNotBlank() } ?: "mp4"}"
+    }
 }

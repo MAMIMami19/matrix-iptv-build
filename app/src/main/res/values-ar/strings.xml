@@ -1989,6 +1989,10 @@
     <string name="iptv_tab_settings">الإعدادات</string>
     <string name="iptv_panel_groups">المجموعات</string>
     <string name="iptv_panel_loading_groups">جارٍ تحميل المجموعات…</string>
+    <string name="iptv_panel_sections_hint">يمين / يسار: التنقل بين الأقسام</string>
+    <string name="iptv_source">المصدر</string>
+    <string name="iptv_source_main">الرئيسي</string>
+    <string name="iptv_source_backup">بديل %1$d</string>
     <string name="cd_playback_speed">سرعة التشغيل</string>
     <string name="cd_aspect_ratio">نسبة العرض</string>
     <string name="cd_open_external_player">فتح في مشغل خارجي</string>

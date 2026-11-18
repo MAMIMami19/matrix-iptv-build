@@ -360,6 +360,21 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
             loadCatalogPipeline(addon, catalog, generation)
         }
 
+        // Matrix 3.5: force-load the Trending catalogs for the hero.
+        // They sit ~50 rows down the home list, so lazy loading never
+        // reaches them at startup and the hero fell back to Continue
+        // Watching (3.4 item 1 — catalogs enabled, rows load, but the
+        // hero snapshot had no Trending row). Loading them eagerly
+        // makes the hero pick Trending as soon as they arrive.
+        val trendingKeys = synchronized(catalogStateLock) {
+            pendingLazyCatalogs.entries.filter { (key, pair) ->
+                val haystack = "${pair.second.name} $key"
+                haystack.contains("trend", ignoreCase = true) ||
+                    haystack.contains("رائج") || haystack.contains("ترند")
+            }.map { it.key }
+        }
+        trendingKeys.forEach { key -> requestLazyCatalogLoad(key) }
+
         // Immediately schedule an update so placeholder rows appear in the UI
         // while catalogs are still loading.
         scheduleUpdateCatalogRows()

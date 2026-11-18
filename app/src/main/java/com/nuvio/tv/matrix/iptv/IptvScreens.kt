@@ -3,7 +3,6 @@ package com.nuvio.tv.matrix.iptv
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -70,6 +69,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Border
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.ExperimentalTvMaterial3Api
 import coil3.compose.AsyncImage
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.theme.NuvioTheme
@@ -299,6 +302,7 @@ private fun IptvPosterCard(
  * Full-width channel/episode row: icon on the left, name on top and an info
  * line underneath (EPG placeholder "Pas d'informations" for live channels).
  */
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun IptvChannelRow(
     iconUrl: String?,
@@ -308,18 +312,34 @@ private fun IptvChannelRow(
     isFavorite: Boolean? = null,
     onFavoriteToggle: (() -> Unit)? = null,
 ) {
-    Row(
-        // Long-press OK on a channel toggles its favorite star (the ★ button
-        // at the row's end is hard to reach by remote); the star still works.
-        modifier = Modifier.fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = { onFavoriteToggle?.invoke() },
+    // Matrix 3.5: tv-material3 Card with the theme's Gold focus
+    // (FocusBackground + focusRing) — the same pattern as the
+    // in-player panel rows, which verified visible on the box. The
+    // old Row + tvFocusRing left the focused row transparent.
+    Card(
+        onClick = onClick,
+        onLongClick = { onFavoriteToggle?.invoke() },
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.colors(
+            containerColor = Color.Transparent,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground,
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                shape = RoundedCornerShape(8.dp),
             )
-            .tvFocusRing(cornerRadius = 8.dp)
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        ),
+        scale = CardDefaults.scale(focusedScale = 1.01f),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(8.dp)),
     ) {
+        Row(
+            // Long-press OK on a channel toggles its favorite star (the ★ button
+            // at the row's end is hard to reach by remote); the star still works.
+            modifier = Modifier.fillMaxWidth()
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
         Box(
             modifier = Modifier.size(56.dp)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
@@ -362,6 +382,7 @@ private fun IptvChannelRow(
             TextButton(onClick = onFavoriteToggle) {
                 Text(if (isFavorite) "★" else "☆")
             }
+        }
         }
     }
 }
@@ -555,6 +576,8 @@ internal fun LiveTvScreen(
                 name = item.name,
                 iconUrl = item.iconUrl,
                 groupName = item.groupName,
+                // Matrix 3.5: tag the source — stream ids collide across lines.
+                sourceIndex = XtreamClient.selectedSourceIndex.value,
             ),
         )
     }
@@ -585,8 +608,14 @@ internal fun LiveTvScreen(
         adultHidden && groupName != null &&
             IptvSettingsRepository.isAdultCategory(groupName)
     }
-    val visibleFavorites = favorites.filterNot { isAdultGroup(it.groupName) }
-    val visibleRecents = recents.filterNot { isAdultGroup(it.groupName) }
+    val visibleFavorites = favorites
+        // Matrix 3.5: favorites/recents belong to the source they came
+        // from — stream ids collide across lines.
+        .filter { it.sourceIndex == XtreamClient.selectedSourceIndex.value }
+        .filterNot { isAdultGroup(it.groupName) }
+    val visibleRecents = recents
+        .filter { it.sourceIndex == XtreamClient.selectedSourceIndex.value }
+        .filterNot { isAdultGroup(it.groupName) }
     val visibleCategories = categories.orEmpty()
         .filterNot { isAdultGroup(it.categoryName) }
     val groupCounts: Map<String, Int>? = allChannels
@@ -596,15 +625,15 @@ internal fun LiveTvScreen(
     // The rows for the selected group, before the search filter. Null
     // while the group's channels are still loading.
     val groupRows: List<LiveTvRowItem>? = when (val group = selectedGroup) {
-        LiveTvGroup.All -> allChannels?.map { it.toRowItem(categoryNameById, favorites) }
+        LiveTvGroup.All -> allChannels?.map { it.toRowItem(categoryNameById, visibleFavorites) }
         LiveTvGroup.Favorites -> visibleFavorites.map { it.toRowItem(isFavorite = true) }
         LiveTvGroup.Recents -> visibleRecents.map {
-            it.toRowItem(isFavorite = favorites.any { fav -> fav.streamId == it.streamId })
+            it.toRowItem(isFavorite = visibleFavorites.any { fav -> fav.streamId == it.streamId })
         }
         is LiveTvGroup.Category -> {
             val streams = allChannels?.filter { it.categoryId == group.category.categoryId }
                 ?: groupCache[group.category.categoryId]
-            streams?.map { it.toRowItem(categoryNameById, favorites) }
+            streams?.map { it.toRowItem(categoryNameById, visibleFavorites) }
         }
     }
     val shownRows = groupRows.orEmpty().filter {
@@ -774,6 +803,7 @@ internal fun LiveTvScreen(
  * One group in the Live TV rail: optional icon, name and a count badge.
  * The selected group gets the violet accent treatment.
  */
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun LiveTvGroupRailItem(
     label: String,
@@ -783,19 +813,33 @@ private fun LiveTvGroupRailItem(
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null,
 ) {
-    Row(
+    // Matrix 3.5: tv-material3 Card with the theme's Gold focus
+    // (FocusBackground + focusRing) — the same pattern as the
+    // in-player panel rows, which verified visible on the box. The
+    // old Row + tvFocusRing left the focused category transparent.
+    Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                if (selected) NuvioTheme.colors.Secondary.copy(alpha = 0.22f)
-                else Color.Transparent,
-            )
-            .clickable(onClick = onClick)
             .then(
                 if (focusRequester != null) Modifier.focusRequester(focusRequester)
                 else Modifier,
+            ),
+        colors = CardDefaults.colors(
+            containerColor = if (selected) NuvioTheme.colors.Secondary.copy(alpha = 0.22f)
+            else Color.Transparent,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground,
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                shape = RoundedCornerShape(12.dp),
             )
-            .tvFocusRing(cornerRadius = 12.dp)
+        ),
+        scale = CardDefaults.scale(focusedScale = 1.01f),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp)),
+    ) {
+    Row(
+        modifier = Modifier.fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -835,6 +879,7 @@ private fun LiveTvGroupRailItem(
             }
         }
     }
+    }
 }
 
 /**
@@ -843,6 +888,7 @@ private fun LiveTvGroupRailItem(
  * favorite star (the star itself is an indicator, not a focus target,
  * so DPAD up/down never gets stuck on it).
  */
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun LiveTvChannelRow(
     number: Int,
@@ -850,15 +896,30 @@ private fun LiveTvChannelRow(
     onClick: () -> Unit,
     onFavoriteToggle: () -> Unit,
 ) {
+    // Matrix 3.5: tv-material3 Card with the theme's Gold focus
+    // (FocusBackground #3D2D1A + focusRing #FFD45C) — the same
+    // pattern as the in-player panel rows, which verified visible
+    // on the box. The old Row + tvFocusRing left the focused
+    // channel row transparent («التركيز شفاف»).
+    Card(
+        onClick = onClick,
+        onLongClick = onFavoriteToggle,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.colors(
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground,
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                shape = RoundedCornerShape(12.dp),
+            )
+        ),
+        scale = CardDefaults.scale(focusedScale = 1.01f),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp)),
+    ) {
     Row(
         modifier = Modifier.fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(NuvioTheme.colors.BackgroundCard)
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onFavoriteToggle,
-            )
-            .tvFocusRing(cornerRadius = 12.dp)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -916,6 +977,7 @@ private fun LiveTvChannelRow(
             color = if (item.isFavorite) NuvioTheme.colors.Secondary
             else NuvioTheme.colors.TextSecondary,
         )
+    }
     }
 }
 
