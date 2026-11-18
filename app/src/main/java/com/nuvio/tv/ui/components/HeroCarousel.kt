@@ -82,6 +82,7 @@ import com.nuvio.tv.ui.util.localizedContentType
 import com.nuvio.tv.ui.util.localizedGenreLabel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.runtime.snapshotFlow
 
 private const val AUTO_ADVANCE_INTERVAL_MS = 10000L
@@ -131,7 +132,12 @@ fun HeroCarousel(
         while (true) {
             delay(AUTO_ADVANCE_INTERVAL_MS)
             // Let a long description finish scrolling before the slide is replaced.
-            snapshotFlow { descriptionScrollHoldIndex == activeIndex }.first { !it }
+            // Matrix 3.5.1: bounded wait — a stuck scroll hold must never
+            // freeze the hero on one title indefinitely (observed: hero
+            // frozen on the same title for 10+ minutes in 3.5).
+            withTimeoutOrNull(30_000) {
+                snapshotFlow { descriptionScrollHoldIndex == activeIndex }.first { !it }
+            }
             if (!isFocused) {
                 activeIndex = (activeIndex + 1) % items.size
             }

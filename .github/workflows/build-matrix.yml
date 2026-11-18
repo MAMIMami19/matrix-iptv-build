@@ -1,21 +1,23 @@
-name: Build Matrix 3.5
+name: Build Matrix 3.5.1
 
-# Matrix 3.5: multi-source IPTV (3 backup Xtream lines + a source
-# switcher in the IPTV screen); brown-gold focus on the IPTV channel
-# list, category rail and tabs; IPTV Settings tab removed; hero
-# force-loads Trending and UP from the top row lands on the hero;
-# in-player panel gains LEFT/RIGHT section jump. Off the 3.4 branch.
+# Matrix 3.5.1: hero fix on top of 3.5 (multi-source IPTV, brown-gold
+# IPTV focus, no IPTV Settings tab, panel section jump — all unchanged).
+# The hero now shows the TOP Trending titles in catalog order (no hash
+# shuffle, no sticky previous-order), Continue Watching titles are
+# excluded from the hero outright, a Trending catalog landing triggers
+# a hero recompute, and the carousel auto-advance can no longer freeze
+# on a stuck description-scroll hold. Off the 3.5 branch.
 # Signing uses the same NUVIO_KEYSTORE_B64 secret as the v2.x/3.0/3.1/
-# 3.2/3.3/3.4 releases, so this installs OVER Matrix 3.4 on box and phone.
+# 3.2/3.3/3.4/3.5 releases, so this installs OVER Matrix 3.5 on box and phone.
 on:
   workflow_dispatch:
   push:
-    branches: [matrix-3.5-multi-source]
+    branches: [matrix-3.5.1-hero-fix]
 
 # Serialize runs: two concurrent full-release builds died together when the
 # runner pool cancelled them (runs 43618067580/43618374036); queue instead.
 concurrency:
-  group: matrix-3.5-multi-source-build
+  group: matrix-3.5.1-hero-fix-build
   cancel-in-progress: false
 
 permissions:
@@ -88,9 +90,9 @@ jobs:
           # are invisible to the in-app updater (unauthenticated API calls
           # never see them, and the tag is not a valid version anyway).
           # Delete the draft after the APKs are verified/downloaded.
-          TAG="matrix-3.5-draft-${{ github.run_number }}"
+          TAG="matrix-3.5.1-draft-${{ github.run_number }}"
           gh release create "$TAG" \
             --draft \
-            --title "Matrix 3.5 draft (CI run ${{ github.run_number }})" \
-            --notes "CI-built Matrix 3.5 release APKs (multi-source IPTV, brown-gold IPTV focus, Settings tab removed, hero Trending + UP-to-hero, panel section jump). Draft only — do not publish without review." \
+            --title "Matrix 3.5.1 draft (CI run ${{ github.run_number }})" \
+            --notes "CI-built Matrix 3.5.1 release APKs (hero shows top Trending titles in catalog order, Continue Watching excluded from hero, hero recomputes when a Trending catalog lands, carousel auto-advance freeze fixed; all 3.5 features unchanged). Draft only — do not publish without review." \
             app/build/outputs/apk/full/release/*.apk

@@ -43,6 +43,16 @@ private data class CatalogUpdateResult(
     val fullRows: List<CatalogRow>
 )
 
+// Matrix 3.5.1: same Trending match as the hero computation
+// (CatalogRow.isTrendingRow in updateCatalogRowsPipeline), but for a
+// catalog descriptor at load time — the hero recomputes as soon as a
+// Trending catalog lands.
+private fun isTrendingCatalog(catalog: CatalogDescriptor): Boolean {
+    val haystack = "${catalog.name} ${catalog.id}"
+    return haystack.contains("trend", ignoreCase = true) ||
+        haystack.contains("رائج") || haystack.contains("ترند")
+}
+
 @OptIn(FlowPreview::class)
 /**
  * Matrix sections: loads the curated matrix-sections catalogs and rebuilds
@@ -507,6 +517,12 @@ internal fun HomeViewModel.loadCatalogPipeline(
                             // First content arriving — show it quickly so the
                             // user sees something beyond placeholders.
                             scheduleUpdateCatalogRows()
+                        } else if (isTrendingCatalog(catalog)) {
+                            // Matrix 3.5.1: a Trending catalog just landed
+                            // and the hero depends on it — recompute now
+                            // instead of waiting for the last pending load
+                            // (a slow/hung lazy load would starve the hero).
+                            scheduleUpdateCatalogRows()
                         }
                         // Otherwise, let the next completion or the final
                         // pendingCatalogLoads==0 trigger the update.
@@ -613,6 +629,16 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
     val heroSectionEnabled = _uiState.value.heroSectionEnabled
     val hideUnreleased = _uiState.value.hideUnreleasedContent
     val titlesSnapshot = customCatalogTitles
+    // Matrix 3.5.1: Continue Watching titles must never appear in the
+    // hero — the user wants Trending there, not what he is already
+    // watching. Base ids (before ':') so a series episode matches its
+    // series (CW stores "ttXXXX:S:E" for episodes, hero ids are "ttXXXX").
+    val continueWatchingBaseIds = _uiState.value.continueWatchingItems.mapTo(mutableSetOf()) { item ->
+        when (item) {
+            is ContinueWatchingItem.InProgress -> item.progress.contentId.substringBefore(':')
+            is ContinueWatchingItem.NextUp -> item.info.contentId.substringBefore(':')
+        }
+    }
 
     val (displayRows, baseHeroItems, baseGridItems, fullRowsFiltered) = withContext(Dispatchers.Default) {
         val rawRows = orderedKeys.mapNotNull { key ->
@@ -677,13 +703,45 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             return result
         }
 
+        // Matrix 3.5.1: Trending hero in NATURAL catalog order (trending
+        // rank), not hash order — the hero shows the TOP trending titles,
+        // and the first hero item is the first title of the first Trending
+        // row. Same slot split across rows as slotShuffled, but with NO
+        // sticky previous-order: a stale hero item (e.g. a Continue
+        // Watching title) must not survive into the Trending hero.
+        // Continue Watching titles are excluded outright.
+        fun trendingHeroItems(
+            rows: List<CatalogRow>,
+            filter: (MetaPreview) -> Boolean,
+            excludeBaseIds: Set<String>
+        ): List<MetaPreview> {
+            val totalCatalogs = rows.size.coerceAtLeast(1)
+            val baseSlot = 7 / totalCatalogs
+            val remainder = 7 % totalCatalogs
+            val seen = mutableSetOf<String>()
+            val result = mutableListOf<MetaPreview>()
+            rows.forEachIndexed { index, row ->
+                val slot = baseSlot + if (index < remainder) 1 else 0
+                val candidates = row.items
+                    .filter(filter)
+                    .filter { it.id.substringBefore(':') !in excludeBaseIds }
+                val unique = candidates.filter { seen.add(it.id) }
+                result += unique.take(slot)
+            }
+            return result
+        }
+
         val currentHeroOrder = heroItemOrder
 
+        // Matrix 3.5.1: no Continue Watching title in the hero, on any path.
+        val notContinueWatching: (MetaPreview) -> Boolean =
+            { it.id.substringBefore(':') !in continueWatchingBaseIds }
+
         val heroItemsFromSelectedCatalogs = slotShuffled(
-            selectedHeroRows, { it.hasHeroArtwork() }, currentHeroOrder
+            selectedHeroRows, { it.hasHeroArtwork() && notContinueWatching(it) }, currentHeroOrder
         )
         val fallbackHeroItemsFromSelectedCatalogs = slotShuffled(
-            selectedHeroRows, { true }, currentHeroOrder
+            selectedHeroRows, { notContinueWatching(it) }, currentHeroOrder
         )
         // When orderedRows is empty (all catalogs disabled), include any
         // hero-only loaded catalogs as fallback hero sources.
@@ -701,7 +759,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             }
         }
         val fallbackHeroItemsWithArtwork = slotShuffled(
-            allHeroFallbackRows, { it.hasHeroArtwork() }, currentHeroOrder
+            allHeroFallbackRows, { it.hasHeroArtwork() && notContinueWatching(it) }, currentHeroOrder
         )
 
         // Matrix 3.4: Trending FIRST. The user wants Trending titles in
@@ -731,11 +789,13 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             }
             addAll(extraFiltered.filter { it.isTrendingRow() })
         }
-        val heroItemsFromTrending = slotShuffled(
-            trendingHeroRows, { it.hasHeroArtwork() }, currentHeroOrder
+        // Matrix 3.5.1: natural catalog order (trending rank) + no sticky
+        // previous-order + no Continue Watching titles (see trendingHeroItems).
+        val heroItemsFromTrending = trendingHeroItems(
+            trendingHeroRows, { it.hasHeroArtwork() }, continueWatchingBaseIds
         )
-        val fallbackHeroItemsFromTrending = slotShuffled(
-            trendingHeroRows, { true }, currentHeroOrder
+        val fallbackHeroItemsFromTrending = trendingHeroItems(
+            trendingHeroRows, { true }, continueWatchingBaseIds
         )
 
         val computedHeroItems = when {
@@ -747,6 +807,22 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             fallbackHeroItemsWithArtwork.isNotEmpty() -> fallbackHeroItemsWithArtwork
             else -> emptyList()
         }
+
+        // Matrix 3.5.1: log the hero decision so an on-device check can
+        // prove which branch ran (3.5 showed a Continue Watching title
+        // in the hero with no trace of why).
+        Log.d(
+            HomeViewModel.TAG,
+            "MatrixHero decision: trendingRows=${trendingHeroRows.size} " +
+                "[${trendingHeroRows.joinToString { it.catalogName }}] " +
+                "candidates trending=${heroItemsFromTrending.size} " +
+                "trendingNoArt=${fallbackHeroItemsFromTrending.size} " +
+                "selected=${heroItemsFromSelectedCatalogs.size} " +
+                "fallback=${fallbackHeroItemsWithArtwork.size} " +
+                "cwExcluded=${continueWatchingBaseIds.size} " +
+                "heroCount=${computedHeroItems.size} " +
+                "first=${computedHeroItems.firstOrNull()?.let { "${it.name} (${it.id})" }}"
+        )
 
         val computedDisplayRows = orderedRows.map { row ->
             val shouldKeepFullRowInModern = currentLayout == HomeLayout.MODERN
