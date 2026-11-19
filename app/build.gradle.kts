@@ -135,8 +135,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 24
         targetSdk = 36
-        versionCode = 17
-        versionName = "3.5.4"
+        versionCode = 18
+        versionName = "3.5.5"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
@@ -166,6 +166,13 @@ android {
         buildConfigField("String", "XTREAM4_SERVER", buildConfigString(localProperties.getProperty("NUVIO_XTREAM4_SERVER", "")))
         buildConfigField("String", "XTREAM4_USERNAME", buildConfigString(localProperties.getProperty("NUVIO_XTREAM4_USER", "")))
         buildConfigField("String", "XTREAM4_PASSWORD", buildConfigString(localProperties.getProperty("NUVIO_XTREAM4_PASS", "")))
+        // Matrix 3.5.5: two more backup Xtream lines (xsmart, same CI-secret pattern).
+        buildConfigField("String", "XTREAM5_SERVER", buildConfigString(localProperties.getProperty("NUVIO_XTREAM5_SERVER", "")))
+        buildConfigField("String", "XTREAM5_USERNAME", buildConfigString(localProperties.getProperty("NUVIO_XTREAM5_USER", "")))
+        buildConfigField("String", "XTREAM5_PASSWORD", buildConfigString(localProperties.getProperty("NUVIO_XTREAM5_PASS", "")))
+        buildConfigField("String", "XTREAM6_SERVER", buildConfigString(localProperties.getProperty("NUVIO_XTREAM6_SERVER", "")))
+        buildConfigField("String", "XTREAM6_USERNAME", buildConfigString(localProperties.getProperty("NUVIO_XTREAM6_USER", "")))
+        buildConfigField("String", "XTREAM6_PASSWORD", buildConfigString(localProperties.getProperty("NUVIO_XTREAM6_PASS", "")))
         buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "https://nuvio.tv/tv-login")}\"")
         buildConfigField("String", "DEVICE_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("DEVICE_LOGIN_WEB_BASE_URL", "https://nuvio.tv/link")}\"")
         buildConfigField("boolean", "DOVI_NATIVE_ENABLED", enableDoviNative.toString())

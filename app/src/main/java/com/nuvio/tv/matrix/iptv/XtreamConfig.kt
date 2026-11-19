@@ -18,7 +18,8 @@ internal data class XtreamSource(
 /**
  * Matrix IPTV Xtream lines, compiled in from local.properties
  * (CI secrets NUVIO_XTREAM_SERVER / NUVIO_XTREAM_USER / NUVIO_XTREAM_PASS
- * for the default line, NUVIO_XTREAM2/3/4_* for the three backups).
+ * for the default line, NUVIO_XTREAM2/3/4_* for the three 3.5 backups,
+ * NUVIO_XTREAM5/6_* for the two 3.5.5 xsmart backups).
  *
  * Source 0 is the default line (the one 3.4 and earlier shipped); the
  * backups are ADDITIONAL sources the user switches to when a line cuts.
@@ -53,6 +54,16 @@ internal object XtreamConfig {
             BuildConfig.XTREAM4_SERVER,
             BuildConfig.XTREAM4_USERNAME,
             BuildConfig.XTREAM4_PASSWORD,
+        ),
+        XtreamSource(
+            BuildConfig.XTREAM5_SERVER,
+            BuildConfig.XTREAM5_USERNAME,
+            BuildConfig.XTREAM5_PASSWORD,
+        ),
+        XtreamSource(
+            BuildConfig.XTREAM6_SERVER,
+            BuildConfig.XTREAM6_USERNAME,
+            BuildConfig.XTREAM6_PASSWORD,
         ),
     ).filter { it.isConfigured }
 

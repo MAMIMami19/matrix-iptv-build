@@ -1,28 +1,22 @@
-name: Build Matrix 3.5.4
+name: Build Matrix 3.5.5
 
-# Matrix 3.5.4: fixes the three 3.5.3 on-device failures (verified
-# 2026-11-18 ~22:52): (1) entry focus now starts ON the hero on fresh
-# app entry even for a returning profile with saved focus (3.5.3 gated
-# it on !hasSavedFocus, so Profil 1 never got it); (2) the hero is now
-# a tv-material3 Card, so the gold ring + carousel dots render via the
-# Card's own focusedBorder (the 3.5.3 foundation-focusable wrapper
-# never showed them on-device); (3) UP from the hero requests the top
-# bar's profile button directly (spatial search was a dead key — the
-# pills are alpha-0 while collapsed and the profile circle is outside
-# the hero's vertical beam), and DOWN from the bar returns to the hero.
-# All 3.5.3 passing behavior unchanged.
+# Matrix 3.5.5: adds two more embedded backup Xtream lines (xsmart,
+# CI secrets NUVIO_XTREAM5_* / NUVIO_XTREAM6_*) to the four 3.5.4
+# shipped. All 3.5.4 behavior unchanged (hero fixes, Gold IPTV focus,
+# no IPTV Settings tab). The new lines appear in the IPTV source
+# switcher as Backup 4 / Backup 5 (existing index-based labels).
 # Signing uses the same NUVIO_KEYSTORE_B64 secret as the v2.x/3.0/3.1/
-# 3.2/3.3/3.4/3.5/3.5.1/3.5.2/3.5.3 releases, so this installs OVER Matrix
-# 3.5.3 on box and phone.
+# 3.2/3.3/3.4/3.5/3.5.1/3.5.2/3.5.3/3.5.4 releases, so this installs
+# OVER Matrix 3.5.4 on box and phone.
 on:
   workflow_dispatch:
   push:
-    branches: [matrix-3.5.4-hero-fixes]
+    branches: [matrix-3.5.5-xsmart]
 
 # Serialize runs: two concurrent full-release builds died together when the
 # runner pool cancelled them (runs 43618067580/43618374036); queue instead.
 concurrency:
-  group: matrix-3.5.4-hero-fixes-build
+  group: matrix-3.5.5-xsmart-build
   cancel-in-progress: false
 
 permissions:
@@ -61,6 +55,12 @@ jobs:
             echo "NUVIO_XTREAM4_SERVER=${{ secrets.NUVIO_XTREAM4_SERVER }}"
             echo "NUVIO_XTREAM4_USER=${{ secrets.NUVIO_XTREAM4_USER }}"
             echo "NUVIO_XTREAM4_PASS=${{ secrets.NUVIO_XTREAM4_PASS }}"
+            echo "NUVIO_XTREAM5_SERVER=${{ secrets.NUVIO_XTREAM5_SERVER }}"
+            echo "NUVIO_XTREAM5_USER=${{ secrets.NUVIO_XTREAM5_USER }}"
+            echo "NUVIO_XTREAM5_PASS=${{ secrets.NUVIO_XTREAM5_PASS }}"
+            echo "NUVIO_XTREAM6_SERVER=${{ secrets.NUVIO_XTREAM6_SERVER }}"
+            echo "NUVIO_XTREAM6_USER=${{ secrets.NUVIO_XTREAM6_USER }}"
+            echo "NUVIO_XTREAM6_PASS=${{ secrets.NUVIO_XTREAM6_PASS }}"
             echo "NUVIO_RELEASE_STORE_FILE=$RUNNER_TEMP/release.keystore"
             echo "NUVIO_RELEASE_STORE_PASSWORD=${{ secrets.NUVIO_RELEASE_STORE_PASSWORD }}"
             echo "NUVIO_RELEASE_KEY_ALIAS=${{ secrets.NUVIO_RELEASE_KEY_ALIAS }}"
@@ -95,9 +95,9 @@ jobs:
           # are invisible to the in-app updater (unauthenticated API calls
           # never see them, and the tag is not a valid version anyway).
           # Delete the draft after the APKs are verified/downloaded.
-          TAG="matrix-3.5.4-draft-${{ github.run_number }}"
+          TAG="matrix-3.5.5-draft-${{ github.run_number }}"
           gh release create "$TAG" \
             --draft \
-            --title "Matrix 3.5.4 draft (CI run ${{ github.run_number }})" \
-            --notes "CI-built Matrix 3.5.4 release APKs (fixes the three 3.5.3 on-device failures: entry focus starts ON the hero on fresh app entry even with saved focus; hero is a tv-material3 Card so the gold ring + carousel dots render; UP from the hero reaches the top bar, DOWN from the bar returns to the hero; all 3.5.3 passing behavior unchanged). Draft only — do not publish without review." \
+            --title "Matrix 3.5.5 draft (CI run ${{ github.run_number }})" \
+            --notes "CI-built Matrix 3.5.5 release APKs (adds two embedded backup Xtream lines, xsmart, as Backup 4 / Backup 5 in the IPTV source switcher; all 3.5.4 behavior unchanged). Draft only — do not publish without review." \
             app/build/outputs/apk/full/release/*.apk
